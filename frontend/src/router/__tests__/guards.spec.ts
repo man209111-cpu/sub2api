@@ -50,6 +50,7 @@ vi.mock('@/api/auth', () => ({
 interface MockAuthState {
   isAuthenticated: boolean
   isAdmin: boolean
+  isSuperAdmin?: boolean
   isSimpleMode: boolean
   backendModeEnabled: boolean
   hasPendingAuthSession: boolean
@@ -65,6 +66,7 @@ function simulateGuard(
 ): string | null {
   const requiresAuth = toMeta.requiresAuth !== false
   const requiresAdmin = toMeta.requiresAdmin === true
+  const isSuperAdmin = authState.isSuperAdmin ?? authState.isAdmin
 
   // 不需要认证的路由
   if (!requiresAuth) {
@@ -106,6 +108,10 @@ function simulateGuard(
   // 需要管理员但不是管理员
   if (requiresAdmin && !authState.isAdmin) {
     return '/dashboard'
+  }
+
+  if (toMeta.requiresSuperAdmin && !isSuperAdmin) {
+    return '/admin/dashboard'
   }
 
   // 简易模式限制
@@ -246,6 +252,31 @@ describe('路由守卫逻辑', () => {
     it('访问用户页面允许通过', () => {
       const redirect = simulateGuard('/dashboard', {}, authState)
       expect(redirect).toBeNull()
+    })
+  })
+
+  describe('已认证 useradmin', () => {
+    const authState: MockAuthState = {
+      isAuthenticated: true,
+      isAdmin: true,
+      isSuperAdmin: false,
+      isSimpleMode: false,
+      backendModeEnabled: false,
+      hasPendingAuthSession: false,
+    }
+
+    it('访问管理页面允许通过', () => {
+      const redirect = simulateGuard('/admin/users', { requiresAdmin: true }, authState)
+      expect(redirect).toBeNull()
+    })
+
+    it('访问仅超级管理员页面会重定向到后台首页', () => {
+      const redirect = simulateGuard(
+        '/admin/settings',
+        { requiresAdmin: true, requiresSuperAdmin: true },
+        authState
+      )
+      expect(redirect).toBe('/admin/dashboard')
     })
   })
 

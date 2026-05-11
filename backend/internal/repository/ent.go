@@ -54,14 +54,14 @@ func InitEnt(cfg *config.Config) (*ent.Client, *sql.DB, error) {
 	}
 	applyDBPoolSettings(drv.DB(), cfg)
 
-	// 确保数据库 schema 已准备就绪。
-	// SQL 迁移文件是 schema 的权威来源（source of truth）。
-	// 这种方式比 Ent 的自动迁移更可控，支持复杂的迁移场景。
 	migrationCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	if err := applyMigrationsFS(migrationCtx, drv.DB(), migrations.FS); err != nil {
-		_ = drv.Close() // 迁移失败时关闭驱动，避免资源泄露
-		return nil, nil, err
+	if cfg.Database.AutoMigrate {
+		// SQL migration files are the source of truth for schema changes.
+		if err := applyMigrationsFS(migrationCtx, drv.DB(), migrations.FS); err != nil {
+			_ = drv.Close()
+			return nil, nil, err
+		}
 	}
 
 	// 创建 Ent 客户端，绑定到已配置的数据库驱动。

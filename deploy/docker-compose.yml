@@ -140,6 +140,8 @@ services:
       # =======================================================================
       # Update Configuration (在线更新配置)
       # =======================================================================
+      # GitHub repo for online update checks and binary downloads
+      - UPDATE_GITHUB_REPO=${UPDATE_GITHUB_REPO:-man209111-cpu/sub2api}
       # Proxy for accessing GitHub (online updates + pricing data)
       # Examples: http://host:port, socks5://host:port
       - UPDATE_PROXY_URL=${UPDATE_PROXY_URL:-}
