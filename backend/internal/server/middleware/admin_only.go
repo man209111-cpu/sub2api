@@ -16,7 +16,7 @@ func AdminOnly() gin.HandlerFunc {
 			return
 		}
 
-		// 检查是否为管理员
+		// 检查是否为超级管理员（admin）
 		if role != service.RoleAdmin {
 			AbortWithError(c, 403, "FORBIDDEN", "Admin access required")
 			return

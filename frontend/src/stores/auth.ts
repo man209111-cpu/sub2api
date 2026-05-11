@@ -87,6 +87,10 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   const isAdmin = computed(() => {
+    return user.value?.role === 'admin' || user.value?.role === 'useradmin'
+  })
+
+  const isSuperAdmin = computed(() => {
     return user.value?.role === 'admin'
   })
 
@@ -476,6 +480,7 @@ export const useAuthStore = defineStore('auth', () => {
     // Computed
     isAuthenticated,
     isAdmin,
+  isSuperAdmin,
     isSimpleMode,
     hasPendingAuthSession,
 

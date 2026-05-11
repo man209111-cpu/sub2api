@@ -765,8 +765,8 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
-  // Check admin requirement
-  if (requiresAdmin && !authStore.isAdmin) {
+  // Check admin requirement (requires admin role, not useradmin)
+  if (requiresAdmin && !authStore.isSuperAdmin) {
     // User is authenticated but not admin, redirect to user dashboard
     next('/dashboard')
     return
