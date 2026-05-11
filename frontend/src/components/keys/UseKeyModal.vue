@@ -275,23 +275,27 @@ const clientTabs = computed((): TabConfig[] => {
         tabs.push({ id: 'claude', label: t('keys.useKeyModal.cliTabs.claudeCode'), icon: TerminalIcon })
       }
       tabs.push({ id: 'opencode', label: t('keys.useKeyModal.cliTabs.opencode'), icon: TerminalIcon })
+      tabs.push({ id: 'openclaw', label: t('keys.useKeyModal.cliTabs.openclaw'), icon: TerminalIcon })
       return tabs
     }
     case 'gemini':
       return [
         { id: 'gemini', label: t('keys.useKeyModal.cliTabs.geminiCli'), icon: SparkleIcon },
-        { id: 'opencode', label: t('keys.useKeyModal.cliTabs.opencode'), icon: TerminalIcon }
+        { id: 'opencode', label: t('keys.useKeyModal.cliTabs.opencode'), icon: TerminalIcon },
+        { id: 'openclaw', label: t('keys.useKeyModal.cliTabs.openclaw'), icon: TerminalIcon }
       ]
     case 'antigravity':
       return [
         { id: 'claude', label: t('keys.useKeyModal.cliTabs.claudeCode'), icon: TerminalIcon },
         { id: 'gemini', label: t('keys.useKeyModal.cliTabs.geminiCli'), icon: SparkleIcon },
-        { id: 'opencode', label: t('keys.useKeyModal.cliTabs.opencode'), icon: TerminalIcon }
+        { id: 'opencode', label: t('keys.useKeyModal.cliTabs.opencode'), icon: TerminalIcon },
+        { id: 'openclaw', label: t('keys.useKeyModal.cliTabs.openclaw'), icon: TerminalIcon }
       ]
     default:
       return [
         { id: 'claude', label: t('keys.useKeyModal.cliTabs.claudeCode'), icon: TerminalIcon },
-        { id: 'opencode', label: t('keys.useKeyModal.cliTabs.opencode'), icon: TerminalIcon }
+        { id: 'opencode', label: t('keys.useKeyModal.cliTabs.opencode'), icon: TerminalIcon },
+        { id: 'openclaw', label: t('keys.useKeyModal.cliTabs.openclaw'), icon: TerminalIcon }
       ]
   }
 })
@@ -309,7 +313,7 @@ const openaiTabs: TabConfig[] = [
   { id: 'windows', label: 'Windows', icon: WindowsIcon }
 ]
 
-const showShellTabs = computed(() => activeClientTab.value !== 'opencode')
+const showShellTabs = computed(() => activeClientTab.value !== 'opencode' && activeClientTab.value !== 'openclaw')
 
 const currentTabs = computed(() => {
   if (!showShellTabs.value) return []
@@ -409,6 +413,21 @@ const currentFiles = computed((): FileConfig[] => {
         ]
       default:
         return [generateOpenCodeConfig('openai', apiBase, apiKey)]
+    }
+  }
+
+  if (activeClientTab.value === 'openclaw') {
+    switch (props.platform) {
+      case 'anthropic':
+        return [generateOpenClawConfig('anthropic', apiBase, apiKey)]
+      case 'openai':
+        return [generateOpenClawConfig('openai', apiBase, apiKey)]
+      case 'gemini':
+        return [generateOpenClawConfig('gemini', geminiBase, apiKey)]
+      case 'antigravity':
+        return [generateOpenClawConfig('antigravity', antigravityBase, apiKey, antigravityGeminiBase)]
+      default:
+        return [generateOpenClawConfig('anthropic', apiBase, apiKey)]
     }
   }
 
@@ -1038,6 +1057,102 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
     path: pathLabel ?? 'opencode.json',
     content,
     hint: t('keys.useKeyModal.opencode.hint')
+  }
+}
+
+function generateOpenClawConfig(platform: GroupPlatform, baseUrl: string, apiKey: string, geminiBaseUrl?: string): FileConfig {
+  const providerId = `sub2api-${platform}`
+  const env = {
+    SUB2API_API_KEY: apiKey
+  }
+  let primaryModel = ''
+  const providers: Record<string, any> = {}
+
+  if (platform === 'openai') {
+    primaryModel = `${providerId}/gpt-5.4`
+    providers[providerId] = {
+      baseUrl,
+      apiKey: '${SUB2API_API_KEY}',
+      api: 'openai-responses',
+      models: [
+        { id: 'gpt-5.4', name: 'GPT-5.4' },
+        { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini' },
+        { id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex' },
+        { id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark' }
+      ]
+    }
+  } else if (platform === 'gemini') {
+    primaryModel = `${providerId}/gemini-2.5-pro`
+    providers[providerId] = {
+      baseUrl,
+      apiKey: '${SUB2API_API_KEY}',
+      api: 'google-generative-ai',
+      models: [
+        { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+        { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro Preview' },
+        { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview' }
+      ]
+    }
+  } else if (platform === 'antigravity') {
+    const claudeProviderId = 'sub2api-antigravity-claude'
+    const geminiProviderId = 'sub2api-antigravity-gemini'
+    primaryModel = `${claudeProviderId}/claude-sonnet-4-6`
+    providers[claudeProviderId] = {
+      baseUrl,
+      apiKey: '${SUB2API_API_KEY}',
+      api: 'anthropic-messages',
+      models: [
+        { id: 'claude-sonnet-4-6', name: 'Claude 4.6 Sonnet' },
+        { id: 'claude-opus-4-6-thinking', name: 'Claude 4.6 Opus (Thinking)' }
+      ]
+    }
+    providers[geminiProviderId] = {
+      baseUrl: geminiBaseUrl ?? baseUrl,
+      apiKey: '${SUB2API_API_KEY}',
+      api: 'google-generative-ai',
+      models: [
+        { id: 'gemini-3.1-pro-high', name: 'Gemini 3.1 Pro High' },
+        { id: 'gemini-3.1-pro-low', name: 'Gemini 3.1 Pro Low' },
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' }
+      ]
+    }
+  } else {
+    primaryModel = `${providerId}/claude-sonnet-4-6`
+    providers[providerId] = {
+      baseUrl,
+      apiKey: '${SUB2API_API_KEY}',
+      api: 'anthropic-messages',
+      models: [
+        { id: 'claude-sonnet-4-6', name: 'Claude 4.6 Sonnet' },
+        { id: 'claude-opus-4-6-thinking', name: 'Claude 4.6 Opus (Thinking)' }
+      ]
+    }
+  }
+
+  const content = JSON.stringify(
+    {
+      env,
+      agents: {
+        defaults: {
+          model: {
+            primary: primaryModel
+          }
+        }
+      },
+      models: {
+        mode: 'merge',
+        providers
+      }
+    },
+    null,
+    2
+  )
+
+  return {
+    path: '~/.openclaw/openclaw.json',
+    content,
+    hint: t('keys.useKeyModal.openclaw.hint')
   }
 }
 

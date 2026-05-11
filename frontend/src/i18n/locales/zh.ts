@@ -704,7 +704,8 @@ export default {
         geminiCli: 'Gemini CLI',
         codexCli: 'Codex CLI',
         codexCliWs: 'Codex CLI (WebSocket)',
-        opencode: 'OpenCode'
+        opencode: 'OpenCode',
+        openclaw: 'OpenClaw'
       },
       antigravity: {
         description: '为 Antigravity 分组配置 API 访问。请根据您使用的客户端选择对应的配置方式。',
@@ -725,6 +726,9 @@ export default {
         title: 'OpenCode 配置示例',
         subtitle: 'opencode.json',
         hint: '配置文件路径：~/.config/opencode/opencode.json（或 opencode.jsonc），不存在需手动创建。可使用默认 provider（openai/anthropic/google）或自定义 provider_id。API Key 支持直接配置或通过客户端 /connect 命令配置。示例仅供参考，模型与选项可按需调整。'
+      },
+      openclaw: {
+        hint: '配置文件路径：~/.openclaw/openclaw.json，不存在需手动创建。配置按当前密钥所属分组生成，模型与选项可按需调整。'
       }
     },
     customKeyLabel: '自定义密钥',

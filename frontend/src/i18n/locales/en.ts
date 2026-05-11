@@ -705,6 +705,7 @@ export default {
         codexCli: 'Codex CLI',
         codexCliWs: 'Codex CLI (WebSocket)',
         opencode: 'OpenCode',
+        openclaw: 'OpenClaw',
       },
       antigravity: {
         description: 'Configure API access for Antigravity group. Select the configuration method based on your client.',
@@ -722,6 +723,9 @@ export default {
         title: 'OpenCode Example',
         subtitle: 'opencode.json',
         hint: 'Config path: ~/.config/opencode/opencode.json (or opencode.jsonc), create if not exists. Use default providers (openai/anthropic/google) or custom provider_id. API Key can be configured directly or via /connect command. This is an example, adjust models and options as needed.',
+      },
+      openclaw: {
+        hint: 'Config path: ~/.openclaw/openclaw.json, create if it does not exist. This example is generated for the current key group platform; adjust models and options as needed.',
       },
     },
     customKeyLabel: 'Custom Key',
