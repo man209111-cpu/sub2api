@@ -720,7 +720,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		PurchaseSubscriptionURL:          strings.TrimSpace(settings[SettingKeyPurchaseSubscriptionURL]),
 		TableDefaultPageSize:             tableDefaultPageSize,
 		TablePageSizeOptions:             tablePageSizeOptions,
-		CustomMenuItems:                  settings[SettingKeyCustomMenuItems],
+		CustomMenuItems:                  string(normalizeCustomMenuItemsRaw(settings[SettingKeyCustomMenuItems])),
 		CustomEndpoints:                  settings[SettingKeyCustomEndpoints],
 		LinuxDoOAuthEnabled:              linuxDoEnabled,
 		WeChatOAuthEnabled:               weChatEnabled,
@@ -987,7 +987,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		PurchaseSubscriptionURL:          settings.PurchaseSubscriptionURL,
 		TableDefaultPageSize:             settings.TableDefaultPageSize,
 		TablePageSizeOptions:             settings.TablePageSizeOptions,
-		CustomMenuItems:                  filterUserVisibleMenuItems(settings.CustomMenuItems),
+		CustomMenuItems:                  filterUserVisibleMenuItems(string(normalizeCustomMenuItemsRaw(settings.CustomMenuItems))),
 		CustomEndpoints:                  safeRawJSONArray(settings.CustomEndpoints),
 		LinuxDoOAuthEnabled:              settings.LinuxDoOAuthEnabled,
 		WeChatOAuthEnabled:               settings.WeChatOAuthEnabled,
@@ -1198,6 +1198,32 @@ func filterUserVisibleMenuItems(raw string) json.RawMessage {
 		return json.RawMessage("[]")
 	}
 	return result
+}
+
+func normalizeCustomMenuItemsRaw(raw string) json.RawMessage {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "[]" {
+		return json.RawMessage("[]")
+	}
+	var items []map[string]any
+	if err := json.Unmarshal([]byte(raw), &items); err != nil {
+		return json.RawMessage("[]")
+	}
+	for _, item := range items {
+		placement, _ := item["placement"].(string)
+		switch strings.TrimSpace(placement) {
+		case "", "sidebar":
+			item["placement"] = "sidebar"
+		case "home_header", "both":
+		default:
+			item["placement"] = "sidebar"
+		}
+	}
+	normalized, err := json.Marshal(items)
+	if err != nil {
+		return json.RawMessage("[]")
+	}
+	return normalized
 }
 
 // safeRawJSONArray returns raw as json.RawMessage if it's valid JSON, otherwise "[]".

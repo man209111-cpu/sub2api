@@ -91,8 +91,17 @@ func SecurityHeaders(cfg config.CSPConfig, getFrameSrcOrigins func() []string) g
 			}
 		}
 
+		embeddedMode := isEmbeddedUIRequest(c)
+		if embeddedMode {
+			finalPolicy = setDirective(finalPolicy, "frame-ancestors", "'self'")
+		}
+
 		c.Header("X-Content-Type-Options", "nosniff")
-		c.Header("X-Frame-Options", "DENY")
+		if embeddedMode {
+			c.Header("X-Frame-Options", "SAMEORIGIN")
+		} else {
+			c.Header("X-Frame-Options", "DENY")
+		}
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
 		if isAPIRoutePath(c) {
 			c.Next()
@@ -125,6 +134,13 @@ func isAPIRoutePath(c *gin.Context) bool {
 		strings.HasPrefix(path, "/antigravity/") ||
 		strings.HasPrefix(path, "/responses") ||
 		strings.HasPrefix(path, "/images")
+}
+
+func isEmbeddedUIRequest(c *gin.Context) bool {
+	if c == nil || c.Request == nil || c.Request.URL == nil {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(c.Query("ui_mode")), "embedded")
 }
 
 // enhanceCSPPolicy 确保 CSP 策略包含 nonce 支持和支付 SDK 必需域名。
@@ -194,4 +210,32 @@ func addToDirective(policy, directive, value string) string {
 	// Insert value before the semicolon
 	insertPos := idx + endIdx
 	return policy[:insertPos] + " " + value + policy[insertPos:]
+}
+
+func setDirective(policy, directive, value string) string {
+	directives := strings.Split(policy, ";")
+	replaced := false
+	for i, rawDirective := range directives {
+		fields := strings.Fields(strings.TrimSpace(rawDirective))
+		if len(fields) == 0 {
+			continue
+		}
+		if fields[0] == directive {
+			directives[i] = directive + " " + value
+			replaced = true
+		}
+	}
+	if !replaced {
+		directives = append(directives, directive+" "+value)
+	}
+
+	result := make([]string, 0, len(directives))
+	for _, rawDirective := range directives {
+		trimmed := strings.TrimSpace(rawDirective)
+		if trimmed == "" {
+			continue
+		}
+		result = append(result, trimmed)
+	}
+	return strings.Join(result, "; ")
 }

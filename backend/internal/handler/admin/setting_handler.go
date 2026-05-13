@@ -1134,6 +1134,14 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 				response.BadRequest(c, "Custom menu item visibility must be 'user' or 'admin'")
 				return
 			}
+			switch item.Placement {
+			case "", "sidebar":
+				items[i].Placement = "sidebar"
+			case "home_header", "both":
+			default:
+				response.BadRequest(c, "Custom menu item placement must be 'sidebar', 'home_header' or 'both'")
+				return
+			}
 			if len(item.IconSVG) > maxMenuItemIconSVGLen {
 				response.BadRequest(c, "Custom menu item icon SVG is too large (max 10KB)")
 				return

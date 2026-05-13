@@ -4408,6 +4408,26 @@
                     </select>
                   </div>
 
+                  <!-- Placement -->
+                  <div>
+                    <label
+                      class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      {{ t("admin.settings.customMenu.placement") }}
+                    </label>
+                    <select v-model="item.placement" class="input text-sm">
+                      <option value="sidebar">
+                        {{ t("admin.settings.customMenu.placementSidebar") }}
+                      </option>
+                      <option value="home_header">
+                        {{ t("admin.settings.customMenu.placementHomeHeader") }}
+                      </option>
+                      <option value="both">
+                        {{ t("admin.settings.customMenu.placementBoth") }}
+                      </option>
+                    </select>
+                  </div>
+
                   <!-- URL (full width) -->
                   <div class="sm:col-span-2">
                     <label
@@ -6145,6 +6165,7 @@ import type {
 } from "@/api/admin/settings";
 import type {
   AdminGroup,
+  CustomMenuPlacement,
   LoginAgreementDocument,
   NotifyEmailEntry,
   Proxy,
@@ -6163,6 +6184,10 @@ import ProxySelector from "@/components/common/ProxySelector.vue";
 import ImageUpload from "@/components/common/ImageUpload.vue";
 import BackupSettings from "@/views/admin/BackupView.vue";
 import { useClipboard } from "@/composables/useClipboard";
+import {
+  DEFAULT_CUSTOM_MENU_PLACEMENT,
+  normalizeCustomMenuItems,
+} from "@/utils/custom-menu";
 import { affiliatesAPI, type AffiliateAdminEntry, type SimpleUser as AffiliateSimpleUser } from "@/api/admin/affiliates";
 import { extractApiErrorMessage, extractI18nErrorMessage } from "@/utils/apiError";
 import { useAppStore } from "@/stores";
@@ -6491,6 +6516,7 @@ const form = reactive<SettingsForm>({
     icon_svg: string;
     url: string;
     visibility: "user" | "admin";
+    placement: CustomMenuPlacement;
     sort_order: number;
   }>,
   custom_endpoints: [] as Array<{
@@ -7094,6 +7120,7 @@ function addMenuItem() {
     icon_svg: "",
     url: "",
     visibility: "user",
+    placement: DEFAULT_CUSTOM_MENU_PLACEMENT,
     sort_order: form.custom_menu_items.length,
   });
 }
@@ -7209,6 +7236,12 @@ async function loadSettings() {
         (form as Record<string, unknown>)[key] = value;
       }
     }
+    form.custom_menu_items = normalizeCustomMenuItems(
+      settings.custom_menu_items,
+    ).map((item) => ({
+      ...item,
+      placement: item.placement || DEFAULT_CUSTOM_MENU_PLACEMENT,
+    }));
     form.login_agreement_mode =
       settings.login_agreement_mode === "checkbox" ? "checkbox" : "modal";
     form.login_agreement_updated_at =
@@ -7575,7 +7608,10 @@ async function saveSettings() {
       hide_ccs_import_button: form.hide_ccs_import_button,
       table_default_page_size: form.table_default_page_size,
       table_page_size_options: form.table_page_size_options,
-      custom_menu_items: form.custom_menu_items,
+      custom_menu_items: form.custom_menu_items.map((item) => ({
+        ...item,
+        placement: item.placement || DEFAULT_CUSTOM_MENU_PLACEMENT,
+      })),
       custom_endpoints: form.custom_endpoints,
       frontend_url: form.frontend_url,
       smtp_host: form.smtp_host,

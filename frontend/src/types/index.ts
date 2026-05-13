@@ -163,6 +163,8 @@ export interface SendVerifyCodeResponse {
   countdown: number
 }
 
+export type CustomMenuPlacement = 'sidebar' | 'home_header' | 'both'
+
 export interface CustomMenuItem {
   id: string
   label: string
@@ -170,6 +172,7 @@ export interface CustomMenuItem {
   url: string
   page_slug?: string
   visibility: 'user' | 'admin'
+  placement?: CustomMenuPlacement
   sort_order: number
 }
 

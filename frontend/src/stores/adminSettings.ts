@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { adminAPI } from '@/api'
 import type { CustomMenuItem } from '@/types'
+import { normalizeCustomMenuItems } from '@/utils/custom-menu'
 
 export const useAdminSettingsStore = defineStore('adminSettings', () => {
   const loaded = ref(false)
@@ -70,7 +71,7 @@ export const useAdminSettingsStore = defineStore('adminSettings', () => {
       opsQueryModeDefault.value = settings.ops_query_mode_default || 'auto'
       writeCachedString('ops_query_mode_default_cached', opsQueryModeDefault.value)
 
-      customMenuItems.value = Array.isArray(settings.custom_menu_items) ? settings.custom_menu_items : []
+      customMenuItems.value = normalizeCustomMenuItems(settings.custom_menu_items)
 
       paymentEnabled.value = paymentConfigResp.data?.enabled ?? false
       writeCachedBool('payment_enabled_cached', paymentEnabled.value)

@@ -47,7 +47,26 @@
         </div>
 
         <!-- Nav Actions -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div
+            v-if="homeHeaderMenuItems.length > 0"
+            class="hidden items-center gap-1 lg:flex"
+          >
+            <router-link
+              v-for="item in homeHeaderMenuItems"
+              :key="item.id"
+              :to="customMenuRoute(item.id)"
+              class="inline-flex items-center gap-2 rounded-full border border-gray-200/70 bg-white/80 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-primary-300 hover:text-primary-700 dark:border-dark-700/80 dark:bg-dark-900/70 dark:text-dark-100 dark:hover:border-primary-500/50 dark:hover:text-white"
+            >
+              <span
+                v-if="item.icon_svg"
+                class="flex h-4 w-4 items-center justify-center text-current"
+                v-html="sanitizeSvg(item.icon_svg)"
+              ></span>
+              <span>{{ item.label }}</span>
+            </router-link>
+          </div>
+
           <!-- Language Switcher -->
           <LocaleSwitcher />
 
@@ -410,6 +429,12 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { sanitizeSvg } from '@/utils/sanitize'
+import {
+  getCustomMenuRoute,
+  isHomeHeaderMenuPlacement,
+  normalizeCustomMenuItems,
+} from '@/utils/custom-menu'
 
 const { t } = useI18n()
 
@@ -422,6 +447,11 @@ const siteLogo = computed(() => appStore.cachedPublicSettings?.site_logo || appS
 const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || 'AI API Gateway Platform')
 const docUrl = computed(() => appStore.cachedPublicSettings?.doc_url || appStore.docUrl || '')
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
+const homeHeaderMenuItems = computed(() =>
+  normalizeCustomMenuItems(appStore.cachedPublicSettings?.custom_menu_items)
+    .filter((item) => item.visibility === 'user' && isHomeHeaderMenuPlacement(item))
+    .sort((a, b) => a.sort_order - b.sort_order)
+)
 
 // Check if homeContent is a URL (for iframe display)
 const isHomeContentUrl = computed(() => {
@@ -447,6 +477,10 @@ const userInitial = computed(() => {
 
 // Current year for footer
 const currentYear = computed(() => new Date().getFullYear())
+
+function customMenuRoute(id: string) {
+  return getCustomMenuRoute(id)
+}
 
 // Toggle theme
 function toggleTheme() {

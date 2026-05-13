@@ -3,26 +3,69 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>API 使用文档</title>
+    <title>大模型 API 接入文档</title>
     <style>
       :root {
         color-scheme: light;
-        --bg: #f4f6f3;
-        --panel: rgba(255, 255, 255, 0.9);
+        --bg: #f6f8fb;
+        --panel: rgba(255, 255, 255, 0.92);
         --panel-strong: #ffffff;
-        --text: #15211b;
-        --muted: #5f6f66;
-        --line: rgba(21, 33, 27, 0.1);
-        --brand: #0f9d78;
-        --brand-soft: rgba(15, 157, 120, 0.12);
-        --accent: #0d6e63;
-        --code-bg: #101917;
+        --panel-soft: #f9fbfd;
+        --panel-tint: rgba(255, 255, 255, 0.84);
+        --panel-elevated: rgba(255, 255, 255, 0.9);
+        --surface-subtle: #fbfdff;
+        --text: #111827;
+        --muted: #6b7280;
+        --line: rgba(148, 163, 184, 0.2);
+        --line-strong: rgba(148, 163, 184, 0.32);
+        --brand: #10b981;
+        --brand-strong: #059669;
+        --brand-soft: rgba(16, 185, 129, 0.12);
+        --accent: #2563eb;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --code-bg: #0f172a;
+        --code-head: rgba(255, 255, 255, 0.04);
         --code-line: rgba(255, 255, 255, 0.08);
-        --code-text: #ecf7f3;
-        --shadow: 0 24px 60px rgba(18, 36, 28, 0.08);
-        --radius: 22px;
-        --radius-sm: 14px;
-        --max-width: 1180px;
+        --code-text: #e5eefc;
+        --hero-start: rgba(255, 255, 255, 0.96);
+        --hero-mid: rgba(245, 252, 250, 0.96);
+        --hero-end: rgba(239, 246, 255, 0.96);
+        --field-label: #374151;
+        --sidebar-link: #4b5563;
+        --placeholder: #9ca3af;
+        --shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
+        --radius-lg: 24px;
+        --radius-md: 16px;
+        --radius-sm: 12px;
+        --max-width: 1360px;
+      }
+
+      html.dark {
+        color-scheme: dark;
+        --bg: #020617;
+        --panel: rgba(15, 23, 42, 0.88);
+        --panel-strong: #0f172a;
+        --panel-soft: #111c31;
+        --panel-tint: rgba(15, 23, 42, 0.8);
+        --panel-elevated: rgba(15, 23, 42, 0.92);
+        --surface-subtle: #132136;
+        --text: #e5edf9;
+        --muted: #94a3b8;
+        --line: rgba(148, 163, 184, 0.14);
+        --line-strong: rgba(148, 163, 184, 0.22);
+        --brand-soft: rgba(16, 185, 129, 0.16);
+        --code-bg: #020617;
+        --code-head: rgba(255, 255, 255, 0.03);
+        --code-line: rgba(255, 255, 255, 0.06);
+        --code-text: #dbeafe;
+        --hero-start: rgba(15, 23, 42, 0.94);
+        --hero-mid: rgba(9, 18, 35, 0.94);
+        --hero-end: rgba(10, 30, 27, 0.9);
+        --field-label: #cbd5e1;
+        --sidebar-link: #cbd5e1;
+        --placeholder: #64748b;
+        --shadow: 0 20px 48px rgba(2, 6, 23, 0.36);
       }
 
       * {
@@ -37,108 +80,293 @@
         margin: 0;
         font-family: "SF Pro Display", "PingFang SC", "Segoe UI", sans-serif;
         color: var(--text);
+        background-color: var(--bg);
         background:
-          radial-gradient(circle at top left, rgba(15, 157, 120, 0.12), transparent 28%),
-          radial-gradient(circle at 85% 10%, rgba(13, 110, 99, 0.1), transparent 22%),
-          linear-gradient(180deg, #fbfcfb 0%, var(--bg) 48%, #eef2ef 100%);
+          linear-gradient(180deg, #f8fafc 0%, #f3f6fb 34%, #eef3f9 100%);
+      }
+
+      html.dark body {
+        background:
+          linear-gradient(180deg, #020617 0%, #081120 34%, #0f172a 100%);
       }
 
       a {
         color: inherit;
       }
 
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      input::placeholder {
+        color: var(--placeholder);
+      }
+
+      select option,
+      select optgroup {
+        background: var(--panel-strong);
+        color: var(--text);
+      }
+
       .page {
         width: min(var(--max-width), calc(100% - 32px));
         margin: 0 auto;
-        padding: 28px 0 56px;
+        padding: 24px 0 56px;
+      }
+
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid var(--line);
+        background: rgba(248, 250, 252, 0.86);
+      }
+
+      html.dark .site-header {
+        background: rgba(2, 6, 23, 0.8);
+      }
+
+      .site-header-shell {
+        width: min(var(--max-width), calc(100% - 32px));
+        min-height: 72px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .site-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .site-brand-mark {
+        width: 40px;
+        height: 40px;
+        overflow: hidden;
+        border-radius: 14px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+        background: var(--panel-tint);
+      }
+
+      .site-brand-mark img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .site-brand-text {
+        min-width: 0;
+      }
+
+      .site-brand-title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      .site-brand-subtitle {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .site-header-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .site-header-nav {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .header-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--panel-tint);
+        text-decoration: none;
+        color: var(--text);
+        transition: 0.16s ease;
+      }
+
+      .header-link:hover {
+        border-color: var(--line-strong);
+        color: var(--brand-strong);
+      }
+
+      .header-icon-btn,
+      .header-select {
+        min-height: 38px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: var(--panel-tint);
+        color: var(--text);
+      }
+
+      .header-icon-btn {
+        width: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: 0.16s ease;
+      }
+
+      .header-icon-btn:hover,
+      .header-select:hover {
+        border-color: var(--line-strong);
+      }
+
+      .header-select {
+        padding: 0 12px;
       }
 
       .hero {
-        position: relative;
-        overflow: hidden;
         padding: 32px;
         border: 1px solid var(--line);
         border-radius: 28px;
         background:
-          linear-gradient(135deg, rgba(15, 157, 120, 0.14), rgba(255, 255, 255, 0.86) 38%, rgba(13, 110, 99, 0.1) 100%);
+          linear-gradient(135deg, var(--hero-start), var(--hero-mid) 42%, var(--hero-end) 100%);
         box-shadow: var(--shadow);
       }
 
-      .hero::after {
-        content: "";
-        position: absolute;
-        inset: auto -80px -90px auto;
-        width: 260px;
-        height: 260px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(15, 157, 120, 0.16), transparent 68%);
-        pointer-events: none;
+      .eyebrow-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
       }
 
-      .eyebrow {
+      .pill {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 8px 12px;
+        padding: 7px 12px;
+        border: 1px solid var(--line);
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.72);
-        border: 1px solid rgba(255, 255, 255, 0.8);
-        color: var(--accent);
+        background: var(--panel-tint);
+        color: var(--muted);
         font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        font-weight: 600;
+      }
+
+      .pill.brand {
+        color: var(--brand-strong);
+        border-color: rgba(16, 185, 129, 0.22);
+        background: rgba(16, 185, 129, 0.08);
       }
 
       h1 {
         margin: 18px 0 12px;
-        font-size: clamp(32px, 5vw, 56px);
-        line-height: 1.02;
+        font-size: clamp(34px, 5vw, 56px);
+        line-height: 1.03;
         letter-spacing: 0;
       }
 
-      .hero p {
-        max-width: 760px;
+      .hero-copy {
+        max-width: 860px;
         margin: 0;
         color: var(--muted);
         font-size: 16px;
         line-height: 1.8;
       }
 
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .hero-actions a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 0 16px;
+        border-radius: 14px;
+        text-decoration: none;
+        border: 1px solid transparent;
+        transition: 0.18s ease;
+      }
+
+      .btn-primary {
+        color: #ffffff;
+        background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+        box-shadow: 0 12px 28px rgba(16, 185, 129, 0.22);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-1px);
+      }
+
+      .btn-secondary {
+        color: var(--text);
+        background: var(--panel-elevated);
+        border-color: var(--line);
+      }
+
+      .btn-secondary:hover {
+        border-color: var(--line-strong);
+        background: var(--panel-strong);
+      }
+
       .hero-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 14px;
-        margin-top: 28px;
+        margin-top: 26px;
       }
 
       .hero-stat {
         padding: 18px;
         border-radius: 18px;
-        background: rgba(255, 255, 255, 0.76);
-        border: 1px solid rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(12px);
+        border: 1px solid var(--line);
+        background: var(--panel-tint);
       }
 
       .hero-stat .label {
         margin-bottom: 8px;
         color: var(--muted);
         font-size: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
+        font-weight: 700;
         letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
 
       .hero-stat .value {
         font-size: 15px;
-        line-height: 1.6;
+        line-height: 1.65;
         font-weight: 700;
-        word-break: break-all;
+        word-break: break-word;
       }
 
       .layout {
         display: grid;
-        grid-template-columns: 240px minmax(0, 1fr);
+        grid-template-columns: 270px minmax(0, 1fr);
         gap: 24px;
         margin-top: 24px;
       }
@@ -147,16 +375,18 @@
         position: sticky;
         top: 18px;
         align-self: start;
+        max-height: calc(100vh - 36px);
+        overflow: auto;
         padding: 18px;
+        border-radius: var(--radius-lg);
         border: 1px solid var(--line);
-        border-radius: var(--radius);
         background: var(--panel);
         box-shadow: var(--shadow);
         backdrop-filter: blur(12px);
       }
 
       .sidebar h2 {
-        margin: 0 0 14px;
+        margin: 0 0 12px;
         font-size: 13px;
         color: var(--muted);
         text-transform: uppercase;
@@ -169,20 +399,20 @@
         margin-bottom: 6px;
         border-radius: 12px;
         text-decoration: none;
-        color: var(--muted);
-        transition: 0.18s ease;
+        color: var(--sidebar-link);
+        transition: 0.16s ease;
       }
 
       .sidebar a:hover {
-        color: var(--accent);
+        color: var(--brand-strong);
         background: var(--brand-soft);
       }
 
       .content section {
-        padding: 28px;
         margin-bottom: 20px;
+        padding: 28px;
+        border-radius: var(--radius-lg);
         border: 1px solid var(--line);
-        border-radius: var(--radius);
         background: var(--panel);
         box-shadow: var(--shadow);
         backdrop-filter: blur(12px);
@@ -190,20 +420,33 @@
 
       .content h2 {
         margin: 0 0 10px;
-        font-size: 28px;
-        line-height: 1.1;
+        font-size: 30px;
+        line-height: 1.08;
       }
 
-      .content .section-desc {
-        margin: 0 0 22px;
+      .section-desc {
+        margin: 0 0 20px;
         color: var(--muted);
         line-height: 1.8;
       }
 
-      .grid-2 {
+      .grid-2,
+      .grid-3,
+      .grid-4 {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 16px;
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
       }
 
       .card {
@@ -213,38 +456,104 @@
         background: var(--panel-strong);
       }
 
+      .card.soft {
+        background: var(--panel-soft);
+      }
+
       .card h3 {
         margin: 0 0 8px;
         font-size: 18px;
       }
 
       .card p,
-      .card li {
-        color: var(--muted);
+      .card li,
+      .note,
+      .plain-list li,
+      td,
+      th {
         line-height: 1.8;
       }
 
-      .endpoint {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        padding: 18px;
-        border-radius: 18px;
-        border: 1px solid var(--line);
-        background: linear-gradient(180deg, rgba(15, 157, 120, 0.06), rgba(255, 255, 255, 0.92));
+      .step-no,
+      .mini-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
       }
 
-      .endpoint strong {
-        font-size: 16px;
+      .step-no {
+        color: #ffffff;
+        background: linear-gradient(135deg, var(--brand), var(--brand-strong));
       }
 
-      .endpoint code,
-      .note code,
-      td code {
-        font-family: "SFMono-Regular", Consolas, monospace;
-        font-size: 13px;
+      .mini-badge {
         color: var(--accent);
-        word-break: break-all;
+        background: rgba(37, 99, 235, 0.1);
+      }
+
+      .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .plain-list {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      .plain-list li + li {
+        margin-top: 6px;
+      }
+
+      .inline-code,
+      code {
+        font-family: "SFMono-Regular", Consolas, monospace;
+      }
+
+      code {
+        color: var(--brand-strong);
+        font-size: 13px;
+        word-break: break-word;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel-strong);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+
+      th {
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
       }
 
       .code-block {
@@ -261,8 +570,31 @@
         gap: 12px;
         padding: 12px 16px;
         border-bottom: 1px solid var(--code-line);
-        color: rgba(236, 247, 243, 0.72);
+        background: var(--code-head);
+        color: rgba(229, 238, 252, 0.82);
         font-size: 13px;
+      }
+
+      .code-title {
+        font-weight: 700;
+      }
+
+      .copy-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 32px;
+        padding: 0 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        color: rgba(229, 238, 252, 0.82);
+        background: rgba(255, 255, 255, 0.02);
+        cursor: pointer;
+        transition: 0.16s ease;
+      }
+
+      .copy-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
       }
 
       pre {
@@ -270,119 +602,295 @@
         padding: 18px;
         overflow-x: auto;
         color: var(--code-text);
-        font: 13px/1.75 "SFMono-Regular", Consolas, monospace;
-      }
-
-      .table-wrap {
-        overflow-x: auto;
-        border: 1px solid var(--line);
-        border-radius: 18px;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        background: var(--panel-strong);
-      }
-
-      th,
-      td {
-        padding: 14px 16px;
-        text-align: left;
-        border-bottom: 1px solid var(--line);
-        vertical-align: top;
-      }
-
-      th {
-        font-size: 12px;
-        color: var(--muted);
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
-      tr:last-child td {
-        border-bottom: 0;
-      }
-
-      ul {
-        margin: 0;
-        padding-left: 18px;
+        font: 13px/1.72 "SFMono-Regular", Consolas, monospace;
       }
 
       .note {
-        margin-top: 16px;
         padding: 16px 18px;
         border-left: 4px solid var(--brand);
         border-radius: 0 16px 16px 0;
         background: var(--brand-soft);
+      }
+
+      .note.warning {
+        border-left-color: var(--warning);
+        background: rgba(245, 158, 11, 0.12);
+      }
+
+      .note.danger {
+        border-left-color: var(--danger);
+        background: rgba(239, 68, 68, 0.1);
+      }
+
+      .host-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .host-card {
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: var(--panel-strong);
+      }
+
+      .host-card h3 {
+        margin: 0;
+        font-size: 17px;
+      }
+
+      .host-card p {
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      .host-grid {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .host-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: var(--surface-subtle);
+      }
+
+      .host-item strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 13px;
+      }
+
+      .host-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .tiny-btn,
+      .action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 36px;
+        padding: 0 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: var(--panel-strong);
         color: var(--text);
+        text-decoration: none;
+        cursor: pointer;
+        transition: 0.16s ease;
+      }
+
+      .tiny-btn:hover,
+      .action-btn:hover {
+        border-color: var(--line-strong);
+        background: var(--panel-elevated);
+      }
+
+      .tiny-btn.brand,
+      .action-btn.brand {
+        color: #ffffff;
+        border-color: transparent;
+        background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .field.full {
+        grid-column: 1 / -1;
+      }
+
+      .field label {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--field-label);
+      }
+
+      .field input,
+      .field select {
+        width: 100%;
+        min-height: 44px;
+        padding: 0 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: var(--panel-strong);
+        color: var(--text);
+      }
+
+      .field small {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .import-result {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 13px;
         line-height: 1.8;
       }
 
       .footer {
         margin-top: 24px;
-        padding: 18px 4px 0;
+        padding: 0 4px;
         color: var(--muted);
         font-size: 13px;
       }
 
-      @media (max-width: 960px) {
+      @media (max-width: 1120px) {
         .layout {
           grid-template-columns: 1fr;
         }
 
         .sidebar {
           position: static;
+          max-height: none;
         }
 
         .hero-grid,
-        .grid-2 {
+        .grid-4 {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .host-list {
           grid-template-columns: 1fr;
         }
       }
 
-      @media (max-width: 640px) {
+      @media (max-width: 760px) {
+        .site-header-shell {
+          width: min(var(--max-width), calc(100% - 20px));
+          min-height: auto;
+          padding: 12px 0;
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .site-header-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .site-header-nav {
+          width: 100%;
+          overflow-x: auto;
+          padding-bottom: 2px;
+        }
+
         .page {
           width: min(var(--max-width), calc(100% - 20px));
           padding-top: 14px;
         }
 
         .hero,
-        .content section {
+        .content section,
+        .sidebar {
           padding: 20px;
           border-radius: 20px;
         }
 
         h1 {
-          font-size: 34px;
+          font-size: 36px;
         }
 
         .content h2 {
           font-size: 24px;
         }
+
+        .hero-grid,
+        .grid-2,
+        .grid-3,
+        .grid-4,
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .code-head {
+          align-items: flex-start;
+          flex-direction: column;
+        }
       }
     </style>
   </head>
   <body>
+    <header class="site-header">
+      <div class="site-header-shell">
+        <a class="site-brand" href="/home">
+          <div class="site-brand-mark">
+            <img id="site-logo" src="/logo.png" alt="Logo" />
+          </div>
+          <div class="site-brand-text">
+            <p class="site-brand-title" id="site-name">Sub2API</p>
+            <p class="site-brand-subtitle" id="site-subtitle">AI API Gateway Platform</p>
+          </div>
+        </a>
+        <div class="site-header-actions">
+          <nav class="site-header-nav" id="site-header-nav"></nav>
+          <select class="header-select" id="locale-switcher" aria-label="Language">
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+          </select>
+          <button class="header-icon-btn" id="theme-toggle" type="button" aria-label="Theme"></button>
+          <a class="header-link" id="header-login-link" href="/login">
+            <span data-i18n="goLogin">登录</span>
+          </a>
+        </div>
+      </div>
+    </header>
     <div class="page">
       <section class="hero" id="top">
-        <div class="eyebrow">API Gateway Docs</div>
-        <h1>大模型 API 使用文档</h1>
-        <p>
-          这是面向当前站点用户的接入说明页。页面内容按 OpenAI 兼容网关的常见用法组织，适合挂在“系统设置 -> 通用设置 -> 文档链接”或“自定义菜单”中直接访问。
+        <div class="eyebrow-row">
+          <span class="pill brand">CC-Switch 优先</span>
+          <span class="pill">默认 Host：<span data-default-host-text>https://re.94xy.cn</span></span>
+          <span class="pill">文档路径：<code>/docs/api.html</code></span>
+        </div>
+        <h1>大模型 API 接入文档</h1>
+        <p class="hero-copy">
+          推荐流程：先进入 <code>/keys</code> 创建或复制 API Key，再优先点击
+          <code>导入到 CCS</code> 一键导入到 CC-Switch。其余客户端按对应协议接入：
+          OpenAI SDK / HTTP 使用 <code>/v1</code>，Claude Code 使用根 Host，Gemini / OpenClaw / Hermes 按各自配置格式接入。
         </p>
+        <div class="hero-actions">
+          <a class="btn-primary" href="/keys">进入 API 密钥</a>
+          <a
+            class="btn-secondary"
+            href="https://github.com/farion1231/cc-switch/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+          >下载 CC-Switch</a>
+          <a class="btn-secondary" href="#hosts">查看 Host 列表</a>
+        </div>
         <div class="hero-grid">
           <div class="hero-stat">
-            <div class="label">推荐访问路径</div>
-            <div class="value">/docs/api.html</div>
+            <div class="label">默认主 Host</div>
+            <div class="value" data-default-host-text>https://re.94xy.cn</div>
           </div>
           <div class="hero-stat">
-            <div class="label">默认协议</div>
-            <div class="value">Bearer API Key</div>
+            <div class="label">站内取 Key 路径</div>
+            <div class="value"><code>/keys</code> -> 创建密钥 / 使用密钥 / 导入到 CCS</div>
           </div>
           <div class="hero-stat">
-            <div class="label">兼容方向</div>
-            <div class="value">OpenAI / Claude Code / Gemini CLI / Codex CLI</div>
+            <div class="label">文档放置方式</div>
+            <div class="value">静态页，适合挂到文档链接或自定义菜单</div>
+          </div>
+          <div class="hero-stat">
+            <div class="label">兼容协议</div>
+            <div class="value">OpenAI / Claude / Gemini / Responses / OpenClaw / Hermes</div>
           </div>
         </div>
       </section>
@@ -390,283 +898,530 @@
       <div class="layout">
         <aside class="sidebar">
           <h2>目录</h2>
-          <a href="#overview">接入概览</a>
-          <a href="#endpoints">接口路径</a>
-          <a href="#curl">HTTP 调用示例</a>
-          <a href="#sdk">SDK 示例</a>
-          <a href="#cli">CLI 配置</a>
-          <a href="#formats">兼容格式</a>
-          <a href="#troubleshooting">常见问题</a>
+          <a href="#quickstart">快速开始</a>
+          <a href="#ccswitch">CC-Switch</a>
+          <a href="#overview">支持平台概览</a>
+          <a href="#hosts">Host 列表</a>
+          <a href="#http">HTTP 示例</a>
+          <a href="#sdk-js">JavaScript SDK</a>
+          <a href="#sdk-python">Python SDK</a>
+          <a href="#claude-code">Claude Code</a>
+          <a href="#gemini-cli">Gemini CLI</a>
+          <a href="#codex-cli">Codex CLI</a>
+          <a href="#opencode">OpenCode</a>
+          <a href="#openclaw">OpenClaw</a>
+          <a href="#hermes">Hermes</a>
+          <a href="#faq">常见问题</a>
         </aside>
 
         <main class="content">
+          <section id="quickstart">
+            <h2>快速开始</h2>
+            <p class="section-desc">
+              默认推荐走 CC-Switch。它和站内 <code>API 密钥</code> 页面已经对齐，拿到 Key 后可以直接一键导入。
+            </p>
+            <div class="grid-3">
+              <div class="card soft">
+                <div class="step-no">01</div>
+                <h3 style="margin-top: 12px;">获取 API Key</h3>
+                <p>登录站点后进入 <code>/keys</code>。创建密钥后，列表行内可以直接看到 <code>使用密钥</code> 和 <code>导入到 CCS</code> 两个动作。</p>
+              </div>
+              <div class="card soft">
+                <div class="step-no">02</div>
+                <h3 style="margin-top: 12px;">优先一键导入</h3>
+                <p>点击 <code>导入到 CCS</code>。OpenAI 分组会导入为 Codex，Anthropic 分组导入为 Claude Code，Gemini 分组导入为 Gemini CLI，Antigravity 会先让你选 Claude 或 Gemini。</p>
+              </div>
+              <div class="card soft">
+                <div class="step-no">03</div>
+                <h3 style="margin-top: 12px;">按客户端使用</h3>
+                <p>如果不使用 CC-Switch，按下方目录选择对应格式：HTTP、OpenAI SDK、Claude Code、Gemini CLI、Codex CLI、OpenClaw、Hermes。</p>
+              </div>
+            </div>
+            <div class="note" style="margin-top: 18px;">
+              后台管理员如果隐藏了 <code>导入到 CCS</code> 按钮，用户仍然可以在本页使用“手动导入 CC-Switch”工具，或按下方 CLI / SDK 示例手动配置。
+            </div>
+          </section>
+
+          <section id="ccswitch">
+            <h2>CC-Switch</h2>
+            <p class="section-desc">
+              站内默认推荐使用 CC-Switch。先在站内 <code>/keys</code> 获取 API Key，再导入到对应客户端配置。
+            </p>
+            <div class="grid-2">
+              <div class="card">
+                <h3>下载安装索引</h3>
+                <ul class="plain-list">
+                  <li>官方 Releases：<a href="https://github.com/farion1231/cc-switch/releases" target="_blank" rel="noopener noreferrer">GitHub Releases</a></li>
+                  <li>Windows：推荐 <code>CC-Switch-*-Windows.msi</code>；便携版可用 <code>Windows-Portable.zip</code></li>
+                  <li>macOS：推荐 <code>macOS.zip</code>；Homebrew 可用 <code>brew tap farion1231/ccswitch</code> + <code>brew install --cask cc-switch</code></li>
+                  <li>Linux：Debian/Ubuntu 用 <code>.deb</code>，Fedora/RHEL 用 <code>.rpm</code>，通用可用 <code>.AppImage</code></li>
+                </ul>
+                <div class="meta-row">
+                  <a class="tiny-btn" href="https://github.com/farion1231/cc-switch/releases" target="_blank" rel="noopener noreferrer">打开下载页</a>
+                  <a class="tiny-btn" href="/keys">去 API 密钥</a>
+                </div>
+              </div>
+              <div class="card">
+                <h3>站内一键导入位置</h3>
+                <ul class="plain-list">
+                  <li>路径：<code>/keys</code></li>
+                  <li>拿到 Key 后，点击同一行的 <code>导入到 CCS</code></li>
+                  <li>Antigravity 分组会先选择导入到 <code>Claude Code</code> 或 <code>Gemini CLI</code></li>
+                  <li>导入完成后，在 CC-Switch 对应应用的 Provider 列表里查看</li>
+                </ul>
+                <div class="note warning" style="margin-top: 12px;">
+                  如果点击导入后没有拉起客户端，通常是 CC-Switch 未安装，或系统还没有注册 <code>ccswitch://</code> 协议。
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-2" style="margin-top: 16px;">
+              <div class="card">
+                <h3>导入映射</h3>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>站内分组</th>
+                        <th>导入应用</th>
+                        <th>CC-Switch Endpoint</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>OpenAI</td>
+                        <td>Codex</td>
+                        <td><code>HOST</code></td>
+                      </tr>
+                      <tr>
+                        <td>Anthropic / Claude</td>
+                        <td>Claude Code</td>
+                        <td><code>HOST</code></td>
+                      </tr>
+                      <tr>
+                        <td>Gemini</td>
+                        <td>Gemini CLI</td>
+                        <td><code>HOST</code></td>
+                      </tr>
+                      <tr>
+                        <td>Antigravity</td>
+                        <td>Claude Code / Gemini CLI</td>
+                        <td><code>HOST/antigravity</code></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="card">
+                <h3>手动导入 CC-Switch</h3>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="ccs-host">Host</label>
+                    <select id="ccs-host"></select>
+                    <small>默认优先使用 <span data-default-host-text>https://re.94xy.cn</span>。</small>
+                  </div>
+                  <div class="field">
+                    <label for="ccs-platform">导入类型</label>
+                    <select id="ccs-platform">
+                      <option value="openai">OpenAI / Codex</option>
+                      <option value="anthropic">Claude Code</option>
+                      <option value="gemini">Gemini CLI</option>
+                      <option value="antigravity-claude">Antigravity -> Claude</option>
+                      <option value="antigravity-gemini">Antigravity -> Gemini</option>
+                    </select>
+                  </div>
+                  <div class="field full">
+                    <label for="ccs-provider-name">Provider 名称</label>
+                    <input id="ccs-provider-name" type="text" value="sub2api" />
+                  </div>
+                  <div class="field full">
+                    <label for="ccs-api-key">API Key</label>
+                    <input id="ccs-api-key" type="text" placeholder="粘贴从 /keys 复制出来的 API Key" />
+                  </div>
+                </div>
+                <div class="host-actions">
+                  <button id="ccs-import-btn" class="action-btn brand" type="button">导入到 CC-Switch</button>
+                  <button id="ccs-copy-btn" class="action-btn" type="button">复制深链</button>
+                </div>
+                <div id="ccs-result" class="import-result"></div>
+              </div>
+            </div>
+          </section>
+
           <section id="overview">
-            <h2>接入概览</h2>
+            <h2>支持平台概览</h2>
             <p class="section-desc">
-              用户先在平台生成 API Key，再通过 OpenAI 兼容地址访问上游模型。站点实际域名、默认 Base URL、自定义端点由管理员在“系统设置 -> 通用设置”中维护，这个页面只负责给出固定的使用范式。
+              不同客户端读取 Host 的方式不一样。HTTP / OpenAI SDK 通常需要显式写 <code>/v1</code>；站内 CLI 配置模板大多使用根 Host。
             </p>
-            <div class="grid-2">
-              <div class="card">
-                <h3>认证方式</h3>
-                <p>所有请求统一使用 <code>Authorization: Bearer YOUR_API_KEY</code>。</p>
-              </div>
-              <div class="card">
-                <h3>常用入口</h3>
-                <p>推荐默认 OpenAI 兼容路径：<code>/v1/chat/completions</code>。</p>
-              </div>
-            </div>
-            <div class="note">
-              页面不直接写死你的正式域名。部署后建议把“文档链接”设置为完整地址，例如 <code>https://your-domain.com/docs/api.html</code>，这样头部文档按钮和自定义菜单都会跳转到这个静态页。
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>平台 / 客户端</th>
+                    <th>协议</th>
+                    <th>推荐写法</th>
+                    <th>说明</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>HTTP / OpenAI SDK</td>
+                    <td>OpenAI Chat / Responses</td>
+                    <td><code><span data-default-host-text>https://re.94xy.cn</span>/v1</code></td>
+                    <td>标准服务端与脚本最稳妥</td>
+                  </tr>
+                  <tr>
+                    <td>Claude Code</td>
+                    <td>Anthropic 兼容</td>
+                    <td><code><span data-default-host-text>https://re.94xy.cn</span></code></td>
+                    <td>使用 <code>ANTHROPIC_BASE_URL</code></td>
+                  </tr>
+                  <tr>
+                    <td>Gemini CLI</td>
+                    <td>Gemini CLI 兼容</td>
+                    <td><code><span data-default-host-text>https://re.94xy.cn</span></code></td>
+                    <td>使用 <code>GOOGLE_GEMINI_BASE_URL</code></td>
+                  </tr>
+                  <tr>
+                    <td>Codex CLI</td>
+                    <td>OpenAI Responses</td>
+                    <td><code><span data-default-host-text>https://re.94xy.cn</span></code></td>
+                    <td>按站内生成模板写入 <code>~/.codex</code></td>
+                  </tr>
+                  <tr>
+                    <td>OpenCode</td>
+                    <td>OpenAI / Anthropic / Google Provider</td>
+                    <td><code><span data-default-host-text>https://re.94xy.cn</span>/v1</code></td>
+                    <td>OpenAI 分组按 <code>baseURL</code> 配置</td>
+                  </tr>
+                  <tr>
+                    <td>OpenClaw</td>
+                    <td>Custom Provider</td>
+                    <td><code><span data-default-host-text>https://re.94xy.cn</span>/v1</code></td>
+                    <td>按 <code>~/.openclaw/openclaw.json</code> 写 <code>models.providers</code></td>
+                  </tr>
+                  <tr>
+                    <td>Hermes</td>
+                    <td>Custom Endpoint</td>
+                    <td><code><span data-default-host-text>https://re.94xy.cn</span>/v1</code></td>
+                    <td>当前版本使用 <code>~/.hermes/config.yaml</code></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </section>
 
-          <section id="endpoints">
-            <h2>接口路径</h2>
+          <section id="hosts">
+            <h2>API 接口地址 Host 列表</h2>
             <p class="section-desc">
-              下表给出常见兼容路径。默认情况下，站点会把这些路径代理到对应上游模型服务。
+              默认主 Host 为 <code>re.94xy.cn</code>。如果后台配置了公开的 <code>API Base URL</code> 或自定义端点，下方会自动带出来。
             </p>
-            <div class="grid-2">
-              <div class="endpoint">
-                <strong>OpenAI 兼容</strong>
-                <code>https://your-domain.com/v1/chat/completions</code>
-              </div>
-              <div class="endpoint">
-                <strong>Gemini 兼容</strong>
-                <code>https://your-domain.com/v1beta</code>
-              </div>
-              <div class="endpoint">
-                <strong>Claude Code / Anthropic</strong>
-                <code>https://your-domain.com</code>
-              </div>
-              <div class="endpoint">
-                <strong>Antigravity 专用</strong>
-                <code>https://your-domain.com/antigravity</code>
-              </div>
+            <div id="host-list" class="host-list"></div>
+            <div class="note" style="margin-top: 18px;">
+              HTTP / OpenAI SDK 通常写 <code>HOST/v1</code>；Gemini / OpenClaw / Hermes 的详细格式看各自章节。站内 <code>API 密钥</code> 页面也会展示管理员配置的可用 Host。
             </div>
           </section>
 
-          <section id="curl">
-            <h2>HTTP 调用示例</h2>
+          <section id="http">
+            <h2>HTTP 示例</h2>
             <p class="section-desc">
-              业务系统、脚本和第三方客户端优先使用 OpenAI 兼容格式，兼容性最好。
+              直接脚本、后端服务、第三方网关优先用 OpenAI 兼容格式。下方示例默认使用 <code><span data-default-host-text>https://re.94xy.cn</span>/v1</code>。
             </p>
             <div class="code-block">
               <div class="code-head">
-                <span>cURL: Chat Completions</span>
-                <span>/v1/chat/completions</span>
+                <span class="code-title">cURL /v1/chat/completions</span>
+                <button class="copy-btn" data-copy-target="code-http-chat" type="button">复制</button>
               </div>
-              <pre><code>curl https://your-domain.com/v1/chat/completions \
+              <pre id="code-http-chat"><code>curl https://re.94xy.cn/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-5.4",
     "messages": [
       {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": "请简要介绍这个 API 网关"}
+      {"role": "user", "content": "请给我一份三点接入建议"}
     ]
   }'</code></pre>
             </div>
             <div class="code-block" style="margin-top: 16px;">
               <div class="code-head">
-                <span>cURL: 流式输出</span>
-                <span>"stream": true</span>
+                <span class="code-title">cURL /v1/models</span>
+                <button class="copy-btn" data-copy-target="code-http-models" type="button">复制</button>
               </div>
-              <pre><code>curl https://your-domain.com/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-5.4",
-    "stream": true,
-    "messages": [
-      {"role": "user", "content": "生成一个三点行动计划"}
-    ]
-  }'</code></pre>
+              <pre id="code-http-models"><code>curl https://re.94xy.cn/v1/models \
+  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
             </div>
           </section>
 
-          <section id="sdk">
-            <h2>SDK 示例</h2>
+          <section id="sdk-js">
+            <h2>JavaScript SDK</h2>
             <p class="section-desc">
-              只要 SDK 支持自定义 <code>base_url</code> 或 <code>baseURL</code>，通常都能平滑接入。
+              只要 SDK 支持自定义 <code>baseURL</code>，大多数都能直接接入。
             </p>
-            <div class="grid-2">
-              <div class="code-block">
-                <div class="code-head">
-                  <span>JavaScript</span>
-                  <span>openai npm</span>
-                </div>
-                <pre><code>import OpenAI from "openai";
+            <div class="code-block">
+              <div class="code-head">
+                <span class="code-title">openai npm</span>
+                <button class="copy-btn" data-copy-target="code-sdk-js" type="button">复制</button>
+              </div>
+              <pre id="code-sdk-js"><code>import OpenAI from "openai";
 
 const client = new OpenAI({
   apiKey: process.env.API_KEY,
-  baseURL: "https://your-domain.com/v1",
+  baseURL: "https://re.94xy.cn/v1",
 });
 
-const res = await client.chat.completions.create({
+const response = await client.chat.completions.create({
   model: "gpt-5.4",
   messages: [{ role: "user", content: "Hello" }],
 });
 
-console.log(res.choices[0]?.message?.content);</code></pre>
+console.log(response.choices[0]?.message?.content);</code></pre>
+            </div>
+          </section>
+
+          <section id="sdk-python">
+            <h2>Python SDK</h2>
+            <p class="section-desc">
+              Python 接入方式和 JavaScript 一样，关键是把 <code>base_url</code> 指向网关的 <code>/v1</code>。
+            </p>
+            <div class="code-block">
+              <div class="code-head">
+                <span class="code-title">openai python</span>
+                <button class="copy-btn" data-copy-target="code-sdk-python" type="button">复制</button>
               </div>
-              <div class="code-block">
-                <div class="code-head">
-                  <span>Python</span>
-                  <span>openai python</span>
-                </div>
-                <pre><code>from openai import OpenAI
+              <pre id="code-sdk-python"><code>from openai import OpenAI
 
 client = OpenAI(
     api_key="YOUR_API_KEY",
-    base_url="https://your-domain.com/v1",
+    base_url="https://re.94xy.cn/v1",
 )
 
-res = client.chat.completions.create(
+response = client.chat.completions.create(
     model="gpt-5.4",
     messages=[{"role": "user", "content": "Hello"}],
 )
 
-print(res.choices[0].message.content)</code></pre>
-              </div>
+print(response.choices[0].message.content)</code></pre>
             </div>
           </section>
 
-          <section id="cli">
-            <h2>CLI 配置</h2>
+          <section id="claude-code">
+            <h2>Claude Code</h2>
             <p class="section-desc">
-              如果你的用户主要通过 Claude Code、Gemini CLI、Codex CLI 或 OpenCode 接入，可以直接参考下面的环境变量和配置示例。
+              Claude Code 按站内现有模板使用根 Host，不额外拼 <code>/v1</code>。
+            </p>
+            <div class="code-block">
+              <div class="code-head">
+                <span class="code-title">macOS / Linux</span>
+                <button class="copy-btn" data-copy-target="code-claude" type="button">复制</button>
+              </div>
+              <pre id="code-claude"><code>export ANTHROPIC_BASE_URL="https://re.94xy.cn"
+export ANTHROPIC_AUTH_TOKEN="YOUR_API_KEY"
+export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1</code></pre>
+            </div>
+          </section>
+
+          <section id="gemini-cli">
+            <h2>Gemini CLI</h2>
+            <p class="section-desc">
+              Gemini CLI 也使用根 Host。模型名按你当前可用权限调整。
+            </p>
+            <div class="code-block">
+              <div class="code-head">
+                <span class="code-title">macOS / Linux</span>
+                <button class="copy-btn" data-copy-target="code-gemini" type="button">复制</button>
+              </div>
+              <pre id="code-gemini"><code>export GOOGLE_GEMINI_BASE_URL="https://re.94xy.cn"
+export GEMINI_API_KEY="YOUR_API_KEY"
+export GEMINI_MODEL="gemini-2.0-flash"</code></pre>
+            </div>
+          </section>
+
+          <section id="codex-cli">
+            <h2>Codex CLI</h2>
+            <p class="section-desc">
+              站内 <code>使用密钥</code> 页面给 Codex CLI 生成的是 <code>~/.codex/config.toml</code> 与 <code>auth.json</code> 两个文件。以下格式与站内模板一致。
             </p>
             <div class="grid-2">
               <div class="code-block">
                 <div class="code-head">
-                  <span>Claude Code</span>
-                  <span>Anthropic 风格</span>
+                  <span class="code-title">~/.codex/config.toml</span>
+                  <button class="copy-btn" data-copy-target="code-codex-config" type="button">复制</button>
                 </div>
-                <pre><code>export ANTHROPIC_BASE_URL="https://your-domain.com"
-export ANTHROPIC_AUTH_TOKEN="YOUR_API_KEY"
-export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1</code></pre>
-              </div>
-              <div class="code-block">
-                <div class="code-head">
-                  <span>Gemini CLI</span>
-                  <span>Gemini 风格</span>
-                </div>
-                <pre><code>export GOOGLE_GEMINI_BASE_URL="https://your-domain.com/v1beta"
-export GEMINI_API_KEY="YOUR_API_KEY"
-export GEMINI_MODEL="gemini-2.0-flash"</code></pre>
-              </div>
-              <div class="code-block">
-                <div class="code-head">
-                  <span>Codex CLI</span>
-                  <span>~/.codex/config.toml</span>
-                </div>
-                <pre><code>model_provider = "OpenAI"
+                <pre id="code-codex-config"><code>model_provider = "OpenAI"
 model = "gpt-5.4"
+review_model = "gpt-5.4"
+model_reasoning_effort = "xhigh"
 disable_response_storage = true
 network_access = "enabled"
+windows_wsl_setup_acknowledged = true
+model_context_window = 1000000
+model_auto_compact_token_limit = 900000
 
 [model_providers.OpenAI]
 name = "OpenAI"
-base_url = "https://your-domain.com/v1"
+base_url = "https://re.94xy.cn"
 wire_api = "responses"
 requires_openai_auth = true</code></pre>
               </div>
               <div class="code-block">
                 <div class="code-head">
-                  <span>OpenCode</span>
-                  <span>opencode.json</span>
+                  <span class="code-title">~/.codex/auth.json</span>
+                  <button class="copy-btn" data-copy-target="code-codex-auth" type="button">复制</button>
                 </div>
-                <pre><code>{
-  "provider": {
-    "openai": {
-      "options": {
-        "baseURL": "https://your-domain.com/v1",
-        "apiKey": "YOUR_API_KEY"
-      }
-    }
-  },
-  "model": "openai/gpt-5.4"
+                <pre id="code-codex-auth"><code>{
+  "OPENAI_API_KEY": "YOUR_API_KEY"
 }</code></pre>
               </div>
             </div>
           </section>
 
-          <section id="formats">
-            <h2>兼容格式</h2>
+          <section id="opencode">
+            <h2>OpenCode</h2>
             <p class="section-desc">
-              这个站点本质上是统一网关，所以文档应重点说明“按什么协议接入”，而不是只强调某一家模型。
+              OpenCode 建议写入 <code>opencode.json</code>。OpenAI 分组的核心是 <code>provider.openai.options.baseURL</code> 与 <code>apiKey</code>。
             </p>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>类型</th>
-                    <th>适用场景</th>
-                    <th>关键路径 / 变量</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>OpenAI Chat Completions</td>
-                    <td>网页、服务端、脚本、第三方 SDK</td>
-                    <td><code>/v1/chat/completions</code></td>
-                  </tr>
-                  <tr>
-                    <td>Responses / Codex</td>
-                    <td>Codex CLI、支持 responses 的客户端</td>
-                    <td><code>base_url=/v1</code></td>
-                  </tr>
-                  <tr>
-                    <td>Anthropic / Claude</td>
-                    <td>Claude Code</td>
-                    <td><code>ANTHROPIC_BASE_URL</code></td>
-                  </tr>
-                  <tr>
-                    <td>Gemini</td>
-                    <td>Gemini CLI、Gemini 兼容调用</td>
-                    <td><code>GOOGLE_GEMINI_BASE_URL</code></td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="code-block">
+              <div class="code-head">
+                <span class="code-title">opencode.json</span>
+                <button class="copy-btn" data-copy-target="code-opencode" type="button">复制</button>
+              </div>
+              <pre id="code-opencode"><code>{
+  "provider": {
+    "openai": {
+      "options": {
+        "baseURL": "https://re.94xy.cn/v1",
+        "apiKey": "YOUR_API_KEY"
+      }
+    }
+  },
+  "agent": {
+    "build": {
+      "options": {
+        "store": false
+      }
+    },
+    "plan": {
+      "options": {
+        "store": false
+      }
+    }
+  },
+  "$schema": "https://opencode.ai/config.json"
+}</code></pre>
             </div>
           </section>
 
-          <section id="troubleshooting">
+          <section id="openclaw">
+            <h2>OpenClaw</h2>
+            <p class="section-desc">
+              OpenClaw 当前推荐按 <code>~/.openclaw/openclaw.json</code> 的 <code>models.providers</code> 写自定义 Provider。这里采用站内实际生成格式：OpenAI 分组使用 <code>api: "openai-responses"</code>。
+            </p>
+            <div class="code-block">
+              <div class="code-head">
+                <span class="code-title">~/.openclaw/openclaw.json</span>
+                <button class="copy-btn" data-copy-target="code-openclaw" type="button">复制</button>
+              </div>
+              <pre id="code-openclaw"><code>{
+  "env": {
+    "SUB2API_API_KEY": "YOUR_API_KEY"
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "sub2api-openai/gpt-5.4"
+      }
+    }
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "sub2api-openai": {
+        "baseUrl": "https://re.94xy.cn/v1",
+        "apiKey": "${SUB2API_API_KEY}",
+        "api": "openai-responses",
+        "models": [
+          { "id": "gpt-5.4", "name": "GPT-5.4" },
+          { "id": "gpt-5.4-mini", "name": "GPT-5.4 Mini" },
+          { "id": "gpt-5.3-codex", "name": "GPT-5.3 Codex" }
+        ]
+      }
+    }
+  }
+}</code></pre>
+            </div>
+            <div class="note" style="margin-top: 16px;">
+              参考 OpenClaw 官方模型提供者文档：自定义 Provider 建议放在 <code>models.providers</code> 下，并按实际后端选择 <code>openai-responses</code> 或其他 API 类型。
+            </div>
+          </section>
+
+          <section id="hermes">
+            <h2>Hermes</h2>
+            <p class="section-desc">
+              Hermes 当前版本以 <code>~/.hermes/config.yaml</code> 为准。官方文档已经明确：旧的 <code>OPENAI_BASE_URL</code> / <code>LLM_MODEL</code> 环境变量不再作为主配置来源。
+            </p>
+            <div class="grid-2">
+              <div class="code-block">
+                <div class="code-head">
+                  <span class="code-title">~/.hermes/config.yaml</span>
+                  <button class="copy-btn" data-copy-target="code-hermes" type="button">复制</button>
+                </div>
+                <pre id="code-hermes"><code>model:
+  default: gpt-5.4
+  provider: custom
+  base_url: https://re.94xy.cn/v1
+  api_key: YOUR_API_KEY</code></pre>
+              </div>
+              <div class="code-block">
+                <div class="code-head">
+                  <span class="code-title">交互式配置</span>
+                  <button class="copy-btn" data-copy-target="code-hermes-interactive" type="button">复制</button>
+                </div>
+                <pre id="code-hermes-interactive"><code>hermes model
+# 选择 "Custom endpoint (self-hosted / VLLM / etc.)"
+# API base URL: https://re.94xy.cn/v1
+# API key: YOUR_API_KEY
+# Model name: gpt-5.4</code></pre>
+              </div>
+            </div>
+            <div class="note warning" style="margin-top: 16px;">
+              当前 Hermes 的自定义端点以 <code>config.yaml</code> 为单一事实来源。不要再依赖旧版 <code>.env</code> 里的 <code>OPENAI_BASE_URL</code>。
+            </div>
+          </section>
+
+          <section id="faq">
             <h2>常见问题</h2>
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>状态码</th>
-                    <th>说明</th>
+                    <th>问题</th>
+                    <th>排查方向</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td><code>401</code></td>
-                    <td>API Key 缺失、错误或已失效。先检查 Bearer Token。</td>
+                    <td>CC-Switch 一键导入没有拉起</td>
+                    <td>确认已安装 CC-Switch，且系统已注册 <code>ccswitch://</code> 协议；否则先走安装。</td>
+                  </tr>
+                  <tr>
+                    <td><code>401</code> / <code>invalid_api_key</code></td>
+                    <td>检查 Key 是否从 <code>/keys</code> 复制完整，确认没有多空格、换行或旧 Key。</td>
                   </tr>
                   <tr>
                     <td><code>403</code></td>
-                    <td>密钥被禁用、IP 限制未通过，或当前分组无权限。</td>
+                    <td>密钥可能被禁用、触发 IP 限制，或当前分组不可用。</td>
                   </tr>
                   <tr>
                     <td><code>404</code></td>
-                    <td>请求路径错误，常见于把 <code>/v1</code>、<code>/v1beta</code> 写错。</td>
+                    <td>大多数是 Host 或路径写错。HTTP / SDK 常用 <code>/v1</code>；Claude / Gemini / Codex CLI 多数写根 Host。</td>
                   </tr>
                   <tr>
-                    <td><code>429</code></td>
-                    <td>触发速率限制或额度限制，可去 API Key 页面看用量窗口。</td>
-                  </tr>
-                  <tr>
-                    <td><code>5xx</code></td>
-                    <td>网关或上游临时异常，建议稍后重试并检查后台账号状态。</td>
+                    <td>Hermes / OpenClaw 不工作</td>
+                    <td>先确认配置文件路径正确，再确认 Host 是否按当前客户端格式填写。OpenClaw 看 <code>openclaw.json</code>，Hermes 看 <code>~/.hermes/config.yaml</code>。</td>
                   </tr>
                 </tbody>
               </table>
-            </div>
-            <div class="note">
-              如果你希望这个静态页显示你自己的域名、默认模型、品牌名，可以后续再把它改成读取运行时配置的版本。但按你当前要求，静态 HTML 更简单，也最适合挂到“文档链接”里。
             </div>
           </section>
         </main>
@@ -676,5 +1431,8 @@ requires_openai_auth = true</code></pre>
         静态文档地址：<code>/docs/api.html</code>
       </div>
     </div>
+
+    <script src="/docs/api.i18n.js"></script>
+    <script src="/docs/api.js"></script>
   </body>
 </html>

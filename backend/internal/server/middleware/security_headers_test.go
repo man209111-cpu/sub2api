@@ -151,6 +151,24 @@ func TestSecurityHeaders(t *testing.T) {
 		assert.Empty(t, GetNonceFromContext(c))
 	})
 
+	t.Run("embedded_ui_allows_same_origin_frame", func(t *testing.T) {
+		cfg := config.CSPConfig{
+			Enabled: true,
+			Policy:  "default-src 'self'; frame-ancestors 'none'",
+		}
+		middleware := SecurityHeaders(cfg, nil)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodGet, "/docs/api.html?ui_mode=embedded", nil)
+
+		middleware(c)
+
+		assert.Equal(t, "SAMEORIGIN", w.Header().Get("X-Frame-Options"))
+		assert.Contains(t, w.Header().Get("Content-Security-Policy"), "frame-ancestors 'self'")
+		assert.NotContains(t, w.Header().Get("Content-Security-Policy"), "frame-ancestors 'none'")
+	})
+
 	t.Run("csp_enabled_with_nonce_placeholder", func(t *testing.T) {
 		cfg := config.CSPConfig{
 			Enabled: true,
@@ -407,6 +425,23 @@ func TestAddToDirective(t *testing.T) {
 
 		assert.Contains(t, result, "script-src")
 		assert.Contains(t, result, "https://example.com")
+	})
+}
+
+func TestSetDirective(t *testing.T) {
+	t.Run("replaces_existing_directive", func(t *testing.T) {
+		policy := "default-src 'self'; frame-ancestors 'none'; script-src 'self'"
+		result := setDirective(policy, "frame-ancestors", "'self'")
+
+		assert.Contains(t, result, "frame-ancestors 'self'")
+		assert.NotContains(t, result, "frame-ancestors 'none'")
+	})
+
+	t.Run("adds_directive_when_missing", func(t *testing.T) {
+		policy := "default-src 'self'; script-src 'self'"
+		result := setDirective(policy, "frame-ancestors", "'self'")
+
+		assert.Contains(t, result, "frame-ancestors 'self'")
 	})
 }
 

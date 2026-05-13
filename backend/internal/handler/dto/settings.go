@@ -13,6 +13,7 @@ type CustomMenuItem struct {
 	URL        string `json:"url"`
 	PageSlug   string `json:"page_slug,omitempty"`
 	Visibility string `json:"visibility"` // "user" or "admin"
+	Placement  string `json:"placement,omitempty"`
 	SortOrder  int    `json:"sort_order"`
 }
 
@@ -367,7 +368,23 @@ func ParseCustomMenuItems(raw string) []CustomMenuItem {
 	if err := json.Unmarshal([]byte(raw), &items); err != nil {
 		return []CustomMenuItem{}
 	}
+	for i := range items {
+		items[i].Placement = normalizeCustomMenuPlacement(items[i].Placement)
+	}
 	return items
+}
+
+func normalizeCustomMenuPlacement(raw string) string {
+	switch strings.TrimSpace(raw) {
+	case "", "sidebar":
+		return "sidebar"
+	case "home_header":
+		return "home_header"
+	case "both":
+		return "both"
+	default:
+		return "sidebar"
+	}
 }
 
 // ParseUserVisibleMenuItems parses custom menu items and filters out admin-only entries.
