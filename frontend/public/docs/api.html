@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API 使用文档</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f6f3;
+        --panel: rgba(255, 255, 255, 0.9);
+        --panel-strong: #ffffff;
+        --text: #15211b;
+        --muted: #5f6f66;
+        --line: rgba(21, 33, 27, 0.1);
+        --brand: #0f9d78;
+        --brand-soft: rgba(15, 157, 120, 0.12);
+        --accent: #0d6e63;
+        --code-bg: #101917;
+        --code-line: rgba(255, 255, 255, 0.08);
+        --code-text: #ecf7f3;
+        --shadow: 0 24px 60px rgba(18, 36, 28, 0.08);
+        --radius: 22px;
+        --radius-sm: 14px;
+        --max-width: 1180px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: "SF Pro Display", "PingFang SC", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(15, 157, 120, 0.12), transparent 28%),
+          radial-gradient(circle at 85% 10%, rgba(13, 110, 99, 0.1), transparent 22%),
+          linear-gradient(180deg, #fbfcfb 0%, var(--bg) 48%, #eef2ef 100%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        width: min(var(--max-width), calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 56px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 32px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background:
+          linear-gradient(135deg, rgba(15, 157, 120, 0.14), rgba(255, 255, 255, 0.86) 38%, rgba(13, 110, 99, 0.1) 100%);
+        box-shadow: var(--shadow);
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: auto -80px -90px auto;
+        width: 260px;
+        height: 260px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(15, 157, 120, 0.16), transparent 68%);
+        pointer-events: none;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 18px 0 12px;
+        font-size: clamp(32px, 5vw, 56px);
+        line-height: 1.02;
+        letter-spacing: 0;
+      }
+
+      .hero p {
+        max-width: 760px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.8;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 28px;
+      }
+
+      .hero-stat {
+        padding: 18px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.76);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+      }
+
+      .hero-stat .label {
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .hero-stat .value {
+        font-size: 15px;
+        line-height: 1.6;
+        font-weight: 700;
+        word-break: break-all;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        gap: 24px;
+        margin-top: 24px;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 18px;
+        align-self: start;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .sidebar h2 {
+        margin: 0 0 14px;
+        font-size: 13px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .sidebar a {
+        display: block;
+        padding: 10px 12px;
+        margin-bottom: 6px;
+        border-radius: 12px;
+        text-decoration: none;
+        color: var(--muted);
+        transition: 0.18s ease;
+      }
+
+      .sidebar a:hover {
+        color: var(--accent);
+        background: var(--brand-soft);
+      }
+
+      .content section {
+        padding: 28px;
+        margin-bottom: 20px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .content h2 {
+        margin: 0 0 10px;
+        font-size: 28px;
+        line-height: 1.1;
+      }
+
+      .content .section-desc {
+        margin: 0 0 22px;
+        color: var(--muted);
+        line-height: 1.8;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: var(--panel-strong);
+      }
+
+      .card h3 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+
+      .card p,
+      .card li {
+        color: var(--muted);
+        line-height: 1.8;
+      }
+
+      .endpoint {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(15, 157, 120, 0.06), rgba(255, 255, 255, 0.92));
+      }
+
+      .endpoint strong {
+        font-size: 16px;
+      }
+
+      .endpoint code,
+      .note code,
+      td code {
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 13px;
+        color: var(--accent);
+        word-break: break-all;
+      }
+
+      .code-block {
+        overflow: hidden;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: var(--code-bg);
+      }
+
+      .code-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--code-line);
+        color: rgba(236, 247, 243, 0.72);
+        font-size: 13px;
+      }
+
+      pre {
+        margin: 0;
+        padding: 18px;
+        overflow-x: auto;
+        color: var(--code-text);
+        font: 13px/1.75 "SFMono-Regular", Consolas, monospace;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--panel-strong);
+      }
+
+      th,
+      td {
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+
+      th {
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .note {
+        margin-top: 16px;
+        padding: 16px 18px;
+        border-left: 4px solid var(--brand);
+        border-radius: 0 16px 16px 0;
+        background: var(--brand-soft);
+        color: var(--text);
+        line-height: 1.8;
+      }
+
+      .footer {
+        margin-top: 24px;
+        padding: 18px 4px 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 960px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+        }
+
+        .hero-grid,
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .page {
+          width: min(var(--max-width), calc(100% - 20px));
+          padding-top: 14px;
+        }
+
+        .hero,
+        .content section {
+          padding: 20px;
+          border-radius: 20px;
+        }
+
+        h1 {
+          font-size: 34px;
+        }
+
+        .content h2 {
+          font-size: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <section class="hero" id="top">
+        <div class="eyebrow">API Gateway Docs</div>
+        <h1>大模型 API 使用文档</h1>
+        <p>
+          这是面向当前站点用户的接入说明页。页面内容按 OpenAI 兼容网关的常见用法组织，适合挂在“系统设置 -> 通用设置 -> 文档链接”或“自定义菜单”中直接访问。
+        </p>
+        <div class="hero-grid">
+          <div class="hero-stat">
+            <div class="label">推荐访问路径</div>
+            <div class="value">/docs/api.html</div>
+          </div>
+          <div class="hero-stat">
+            <div class="label">默认协议</div>
+            <div class="value">Bearer API Key</div>
+          </div>
+          <div class="hero-stat">
+            <div class="label">兼容方向</div>
+            <div class="value">OpenAI / Claude Code / Gemini CLI / Codex CLI</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="layout">
+        <aside class="sidebar">
+          <h2>目录</h2>
+          <a href="#overview">接入概览</a>
+          <a href="#endpoints">接口路径</a>
+          <a href="#curl">HTTP 调用示例</a>
+          <a href="#sdk">SDK 示例</a>
+          <a href="#cli">CLI 配置</a>
+          <a href="#formats">兼容格式</a>
+          <a href="#troubleshooting">常见问题</a>
+        </aside>
+
+        <main class="content">
+          <section id="overview">
+            <h2>接入概览</h2>
+            <p class="section-desc">
+              用户先在平台生成 API Key，再通过 OpenAI 兼容地址访问上游模型。站点实际域名、默认 Base URL、自定义端点由管理员在“系统设置 -> 通用设置”中维护，这个页面只负责给出固定的使用范式。
+            </p>
+            <div class="grid-2">
+              <div class="card">
+                <h3>认证方式</h3>
+                <p>所有请求统一使用 <code>Authorization: Bearer YOUR_API_KEY</code>。</p>
+              </div>
+              <div class="card">
+                <h3>常用入口</h3>
+                <p>推荐默认 OpenAI 兼容路径：<code>/v1/chat/completions</code>。</p>
+              </div>
+            </div>
+            <div class="note">
+              页面不直接写死你的正式域名。部署后建议把“文档链接”设置为完整地址，例如 <code>https://your-domain.com/docs/api.html</code>，这样头部文档按钮和自定义菜单都会跳转到这个静态页。
+            </div>
+          </section>
+
+          <section id="endpoints">
+            <h2>接口路径</h2>
+            <p class="section-desc">
+              下表给出常见兼容路径。默认情况下，站点会把这些路径代理到对应上游模型服务。
+            </p>
+            <div class="grid-2">
+              <div class="endpoint">
+                <strong>OpenAI 兼容</strong>
+                <code>https://your-domain.com/v1/chat/completions</code>
+              </div>
+              <div class="endpoint">
+                <strong>Gemini 兼容</strong>
+                <code>https://your-domain.com/v1beta</code>
+              </div>
+              <div class="endpoint">
+                <strong>Claude Code / Anthropic</strong>
+                <code>https://your-domain.com</code>
+              </div>
+              <div class="endpoint">
+                <strong>Antigravity 专用</strong>
+                <code>https://your-domain.com/antigravity</code>
+              </div>
+            </div>
+          </section>
+
+          <section id="curl">
+            <h2>HTTP 调用示例</h2>
+            <p class="section-desc">
+              业务系统、脚本和第三方客户端优先使用 OpenAI 兼容格式，兼容性最好。
+            </p>
+            <div class="code-block">
+              <div class="code-head">
+                <span>cURL: Chat Completions</span>
+                <span>/v1/chat/completions</span>
+              </div>
+              <pre><code>curl https://your-domain.com/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5.4",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "请简要介绍这个 API 网关"}
+    ]
+  }'</code></pre>
+            </div>
+            <div class="code-block" style="margin-top: 16px;">
+              <div class="code-head">
+                <span>cURL: 流式输出</span>
+                <span>"stream": true</span>
+              </div>
+              <pre><code>curl https://your-domain.com/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5.4",
+    "stream": true,
+    "messages": [
+      {"role": "user", "content": "生成一个三点行动计划"}
+    ]
+  }'</code></pre>
+            </div>
+          </section>
+
+          <section id="sdk">
+            <h2>SDK 示例</h2>
+            <p class="section-desc">
+              只要 SDK 支持自定义 <code>base_url</code> 或 <code>baseURL</code>，通常都能平滑接入。
+            </p>
+            <div class="grid-2">
+              <div class="code-block">
+                <div class="code-head">
+                  <span>JavaScript</span>
+                  <span>openai npm</span>
+                </div>
+                <pre><code>import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: process.env.API_KEY,
+  baseURL: "https://your-domain.com/v1",
+});
+
+const res = await client.chat.completions.create({
+  model: "gpt-5.4",
+  messages: [{ role: "user", content: "Hello" }],
+});
+
+console.log(res.choices[0]?.message?.content);</code></pre>
+              </div>
+              <div class="code-block">
+                <div class="code-head">
+                  <span>Python</span>
+                  <span>openai python</span>
+                </div>
+                <pre><code>from openai import OpenAI
+
+client = OpenAI(
+    api_key="YOUR_API_KEY",
+    base_url="https://your-domain.com/v1",
+)
+
+res = client.chat.completions.create(
+    model="gpt-5.4",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+
+print(res.choices[0].message.content)</code></pre>
+              </div>
+            </div>
+          </section>
+
+          <section id="cli">
+            <h2>CLI 配置</h2>
+            <p class="section-desc">
+              如果你的用户主要通过 Claude Code、Gemini CLI、Codex CLI 或 OpenCode 接入，可以直接参考下面的环境变量和配置示例。
+            </p>
+            <div class="grid-2">
+              <div class="code-block">
+                <div class="code-head">
+                  <span>Claude Code</span>
+                  <span>Anthropic 风格</span>
+                </div>
+                <pre><code>export ANTHROPIC_BASE_URL="https://your-domain.com"
+export ANTHROPIC_AUTH_TOKEN="YOUR_API_KEY"
+export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1</code></pre>
+              </div>
+              <div class="code-block">
+                <div class="code-head">
+                  <span>Gemini CLI</span>
+                  <span>Gemini 风格</span>
+                </div>
+                <pre><code>export GOOGLE_GEMINI_BASE_URL="https://your-domain.com/v1beta"
+export GEMINI_API_KEY="YOUR_API_KEY"
+export GEMINI_MODEL="gemini-2.0-flash"</code></pre>
+              </div>
+              <div class="code-block">
+                <div class="code-head">
+                  <span>Codex CLI</span>
+                  <span>~/.codex/config.toml</span>
+                </div>
+                <pre><code>model_provider = "OpenAI"
+model = "gpt-5.4"
+disable_response_storage = true
+network_access = "enabled"
+
+[model_providers.OpenAI]
+name = "OpenAI"
+base_url = "https://your-domain.com/v1"
+wire_api = "responses"
+requires_openai_auth = true</code></pre>
+              </div>
+              <div class="code-block">
+                <div class="code-head">
+                  <span>OpenCode</span>
+                  <span>opencode.json</span>
+                </div>
+                <pre><code>{
+  "provider": {
+    "openai": {
+      "options": {
+        "baseURL": "https://your-domain.com/v1",
+        "apiKey": "YOUR_API_KEY"
+      }
+    }
+  },
+  "model": "openai/gpt-5.4"
+}</code></pre>
+              </div>
+            </div>
+          </section>
+
+          <section id="formats">
+            <h2>兼容格式</h2>
+            <p class="section-desc">
+              这个站点本质上是统一网关，所以文档应重点说明“按什么协议接入”，而不是只强调某一家模型。
+            </p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>类型</th>
+                    <th>适用场景</th>
+                    <th>关键路径 / 变量</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>OpenAI Chat Completions</td>
+                    <td>网页、服务端、脚本、第三方 SDK</td>
+                    <td><code>/v1/chat/completions</code></td>
+                  </tr>
+                  <tr>
+                    <td>Responses / Codex</td>
+                    <td>Codex CLI、支持 responses 的客户端</td>
+                    <td><code>base_url=/v1</code></td>
+                  </tr>
+                  <tr>
+                    <td>Anthropic / Claude</td>
+                    <td>Claude Code</td>
+                    <td><code>ANTHROPIC_BASE_URL</code></td>
+                  </tr>
+                  <tr>
+                    <td>Gemini</td>
+                    <td>Gemini CLI、Gemini 兼容调用</td>
+                    <td><code>GOOGLE_GEMINI_BASE_URL</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="troubleshooting">
+            <h2>常见问题</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>状态码</th>
+                    <th>说明</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>401</code></td>
+                    <td>API Key 缺失、错误或已失效。先检查 Bearer Token。</td>
+                  </tr>
+                  <tr>
+                    <td><code>403</code></td>
+                    <td>密钥被禁用、IP 限制未通过，或当前分组无权限。</td>
+                  </tr>
+                  <tr>
+                    <td><code>404</code></td>
+                    <td>请求路径错误，常见于把 <code>/v1</code>、<code>/v1beta</code> 写错。</td>
+                  </tr>
+                  <tr>
+                    <td><code>429</code></td>
+                    <td>触发速率限制或额度限制，可去 API Key 页面看用量窗口。</td>
+                  </tr>
+                  <tr>
+                    <td><code>5xx</code></td>
+                    <td>网关或上游临时异常，建议稍后重试并检查后台账号状态。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="note">
+              如果你希望这个静态页显示你自己的域名、默认模型、品牌名，可以后续再把它改成读取运行时配置的版本。但按你当前要求，静态 HTML 更简单，也最适合挂到“文档链接”里。
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <div class="footer">
+        静态文档地址：<code>/docs/api.html</code>
+      </div>
+    </div>
+  </body>
+</html>
