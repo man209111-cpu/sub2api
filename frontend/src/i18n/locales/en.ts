@@ -1006,6 +1006,8 @@ export default {
     stats: {
       rebateRate: 'My Rebate Rate',
       rebateRateHint: 'What you earn each time an invitee recharges',
+      inviteBalanceReward: 'Signup Balance Reward',
+      inviteBalanceRewardHint: 'Credited to your balance when a new user signs up through your invite',
       invitedUsers: 'Invited Users',
       availableQuota: 'Available Rebate Quota',
       frozenQuota: 'Frozen',
@@ -1033,6 +1035,7 @@ export default {
     tips: {
       title: 'How It Works',
       line1: 'Share your affiliate code or invite link with new users.',
+      signupReward: 'When a new user signs up through your invite link, you receive {amount} in balance.',
       line2: 'When invitees recharge, you receive {rate} of the recharge as rebate quota.',
       line3: 'Transfer rebate quota to balance at any time.',
       line4: 'Newly earned rebates may have a waiting period before they can be transferred.'
@@ -1729,6 +1732,9 @@ export default {
       copyPassword: 'Copy password',
       creating: 'Creating...',
       updating: 'Updating...',
+      fetchRegisterIpLocation: 'Fetch signup IP location',
+      registerIpLocationUpdated: 'Signup IP location updated',
+      failedToFetchRegisterIpLocation: 'Failed to fetch signup IP location',
       form: {
         rpmLimit: 'Requests Per Minute (RPM)',
         rpmLimitPlaceholder: '0 = unlimited',
@@ -1740,6 +1746,8 @@ export default {
         email: 'Email',
         username: 'Username',
         notes: 'Notes',
+        registerIp: 'Signup IP',
+        registerIpLocation: 'Signup Location',
         role: 'Role',
         groups: 'Groups',
         subscriptions: 'Subscriptions',
@@ -5136,6 +5144,8 @@ export default {
           durationDaysDesc: 'Rebate relationship expires after this many days since invitee registration. 0 = permanent.',
           perInviteeCap: 'Per-Invitee Rebate Cap',
           perInviteeCapDesc: 'Maximum total rebate from a single invitee. 0 = no limit.',
+          inviteBalanceReward: 'Invite Signup Balance Reward',
+          inviteBalanceRewardDesc: 'Fixed amount credited directly to the inviter balance after an invitee registers and binds. 0 = disabled.',
           customUsers: {
             title: 'Per-User Overrides',
             description: 'Set a custom invite code or exclusive rebate rate for specific users. Lists only users that have an override applied.',

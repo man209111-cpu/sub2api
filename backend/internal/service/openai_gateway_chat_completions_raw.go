@@ -114,7 +114,6 @@ func (s *OpenAIGatewayService) forwardAsRawChatCompletions(
 		zap.Bool("stream", clientStream),
 	)
 
-	// 5. Build upstream request
 	apiKey := account.GetOpenAIApiKey()
 	if apiKey == "" {
 		return nil, fmt.Errorf("account %d missing api_key", account.ID)
@@ -129,53 +128,41 @@ func (s *OpenAIGatewayService) forwardAsRawChatCompletions(
 	}
 	targetURL := buildOpenAIChatCompletionsURL(validatedURL)
 
-	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
-	upstreamReq, err := http.NewRequestWithContext(upstreamCtx, http.MethodPost, targetURL, bytes.NewReader(upstreamBody))
-	releaseUpstreamCtx()
-	if err != nil {
-		return nil, fmt.Errorf("build upstream request: %w", err)
-	}
-	upstreamReq.Header.Set("Content-Type", "application/json")
-	upstreamReq.Header.Set("Authorization", "Bearer "+apiKey)
-	if clientStream {
-		upstreamReq.Header.Set("Accept", "text/event-stream")
-	} else {
-		upstreamReq.Header.Set("Accept", "application/json")
-	}
-
-	// 透传白名单中的客户端 header。详见 openaiCCRawAllowedHeaders 的设计说明。
-	for key, values := range c.Request.Header {
-		lowerKey := strings.ToLower(key)
-		if openaiCCRawAllowedHeaders[lowerKey] {
-			for _, v := range values {
-				upstreamReq.Header.Add(key, v)
-			}
-		}
-	}
-	customUA := account.GetOpenAIUserAgent()
-	if customUA != "" {
-		upstreamReq.Header.Set("user-agent", customUA)
-	}
-
 	// 6. Send request
 	proxyURL := ""
 	if account.Proxy != nil {
 		proxyURL = account.Proxy.URL()
 	}
-	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+	resp, err := s.doOpenAIUpstreamWithRequestRetry(ctx, c, account, proxyURL, false, func(upstreamCtx context.Context) (*http.Request, error) {
+		upstreamReq, err := http.NewRequestWithContext(upstreamCtx, http.MethodPost, targetURL, bytes.NewReader(upstreamBody))
+		if err != nil {
+			return nil, fmt.Errorf("build upstream request: %w", err)
+		}
+		upstreamReq.Header.Set("Content-Type", "application/json")
+		upstreamReq.Header.Set("Authorization", "Bearer "+apiKey)
+		if clientStream {
+			upstreamReq.Header.Set("Accept", "text/event-stream")
+		} else {
+			upstreamReq.Header.Set("Accept", "application/json")
+		}
+
+		// 透传白名单中的客户端 header。详见 openaiCCRawAllowedHeaders 的设计说明。
+		for key, values := range c.Request.Header {
+			lowerKey := strings.ToLower(key)
+			if openaiCCRawAllowedHeaders[lowerKey] {
+				for _, v := range values {
+					upstreamReq.Header.Add(key, v)
+				}
+			}
+		}
+		customUA := account.GetOpenAIUserAgent()
+		if customUA != "" {
+			upstreamReq.Header.Set("user-agent", customUA)
+		}
+		return upstreamReq, nil
+	})
 	if err != nil {
-		safeErr := sanitizeUpstreamErrorMessage(err.Error())
-		setOpsUpstreamError(c, 0, safeErr, "")
-		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
-			AccountID:          account.ID,
-			AccountName:        account.Name,
-			UpstreamStatusCode: 0,
-			Kind:               "request_error",
-			Message:            safeErr,
-		})
-		writeChatCompletionsError(c, http.StatusBadGateway, "upstream_error", "Upstream request failed")
-		return nil, fmt.Errorf("upstream request failed: %s", safeErr)
+		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 

@@ -90,6 +90,12 @@ export interface User {
   rpm_limit?: number // User-level RPM cap (0 = unlimited); effective as fallback when group has no rpm_limit
   status: 'active' | 'disabled' // Account status
   allowed_groups: number[] | null // Allowed group IDs (null = all non-exclusive groups)
+  register_ip_address?: string
+  register_ip_country?: string
+  register_ip_country_code?: string
+  register_ip_region?: string
+  register_ip_city?: string
+  register_ip_location?: string
   balance_notify_enabled: boolean
   balance_notify_threshold: number | null
   balance_notify_extra_emails: NotifyEmailEntry[]
@@ -141,6 +147,8 @@ export interface UserAffiliateDetail {
   aff_quota: number
   aff_frozen_quota: number
   aff_history_quota: number
+  /** 新用户通过邀请注册后，直接进入邀请人余额的固定金额。0 表示关闭。 */
+  invite_balance_reward: number
   /** 当前用户作为邀请人时实际生效的返利比例（专属覆盖全局）。0-100。 */
   effective_rebate_rate_percent: number
   invitees: AffiliateInvitee[]

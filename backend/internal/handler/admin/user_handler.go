@@ -341,6 +341,24 @@ func (h *UserHandler) UpdateBalance(c *gin.Context) {
 	})
 }
 
+// RefreshRegistrationIPLocation handles refreshing signup IP location.
+// POST /api/v1/admin/users/:id/register-ip-location
+func (h *UserHandler) RefreshRegistrationIPLocation(c *gin.Context) {
+	userID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid user ID")
+		return
+	}
+
+	user, err := h.adminService.RefreshUserRegistrationIPLocation(c.Request.Context(), userID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, dto.UserFromServiceAdmin(user))
+}
+
 // GetUserAPIKeys handles getting user's API keys
 // GET /api/v1/admin/users/:id/api-keys
 func (h *UserHandler) GetUserAPIKeys(c *gin.Context) {

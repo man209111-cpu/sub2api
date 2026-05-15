@@ -175,6 +175,11 @@ func (s *stubAdminService) UpdateUserBalance(ctx context.Context, userID int64, 
 	return &user, nil
 }
 
+func (s *stubAdminService) RefreshUserRegistrationIPLocation(ctx context.Context, userID int64) (*service.User, error) {
+	user := service.User{ID: userID, Email: "user@example.com", Status: service.StatusActive, RegisterIPAddress: "8.8.8.8", RegisterIPLocation: "美国"}
+	return &user, nil
+}
+
 func (s *stubAdminService) BatchUpdateConcurrency(ctx context.Context, userIDs []int64, value int, mode string) (int, error) {
 	return len(userIDs), nil
 }

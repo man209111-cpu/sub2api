@@ -87,6 +87,8 @@ type AffiliateDetail struct {
 	AffQuota        float64 `json:"aff_quota"`
 	AffFrozenQuota  float64 `json:"aff_frozen_quota"`
 	AffHistoryQuota float64 `json:"aff_history_quota"`
+	// InviteBalanceReward 是新用户通过邀请注册并绑定成功后，直接进入邀请人余额的固定金额。
+	InviteBalanceReward float64 `json:"invite_balance_reward"`
 	// EffectiveRebateRatePercent 是当前用户作为邀请人时实际生效的返利比例：
 	// 优先用户自己的专属比例（aff_rebate_rate_percent），否则回退到全局比例。
 	// 用于在用户的 /affiliate 页面直观展示「分享后能拿到多少」。
@@ -99,6 +101,7 @@ type AffiliateRepository interface {
 	GetAffiliateByCode(ctx context.Context, code string) (*AffiliateSummary, error)
 	BindInviter(ctx context.Context, userID, inviterID int64) (bool, error)
 	AccrueQuota(ctx context.Context, inviterID, inviteeUserID int64, amount float64, freezeHours int, sourceOrderID *int64) (bool, error)
+	CreditInviteBalanceReward(ctx context.Context, inviterID, inviteeUserID int64, amount float64) (float64, error)
 	GetAccruedRebateFromInvitee(ctx context.Context, inviterID, inviteeUserID int64) (float64, error)
 	ThawFrozenQuota(ctx context.Context, userID int64) (float64, error)
 	TransferQuotaToBalance(ctx context.Context, userID int64) (float64, float64, error)
@@ -261,9 +264,21 @@ func (s *AffiliateService) GetAffiliateDetail(ctx context.Context, userID int64)
 		AffQuota:                   summary.AffQuota,
 		AffFrozenQuota:             summary.AffFrozenQuota,
 		AffHistoryQuota:            summary.AffHistoryQuota,
+		InviteBalanceReward:        s.resolveInviteBalanceReward(ctx),
 		EffectiveRebateRatePercent: s.resolveRebateRatePercent(ctx, summary),
 		Invitees:                   invitees,
 	}, nil
+}
+
+func (s *AffiliateService) resolveInviteBalanceReward(ctx context.Context) float64 {
+	if s == nil || s.settingService == nil {
+		return AffiliateInviteBalanceRewardDefault
+	}
+	amount := s.settingService.GetAffiliateInviteBalanceReward(ctx)
+	if amount <= 0 || math.IsNaN(amount) || math.IsInf(amount, 0) {
+		return AffiliateInviteBalanceRewardDefault
+	}
+	return amount
 }
 
 func (s *AffiliateService) BindInviterByCode(ctx context.Context, userID int64, rawCode string) error {
@@ -308,7 +323,25 @@ func (s *AffiliateService) BindInviterByCode(ctx context.Context, userID int64, 
 	if !bound {
 		return ErrAffiliateAlreadyBound
 	}
+	s.creditInviteBalanceReward(ctx, inviterSummary.UserID, userID)
 	return nil
+}
+
+func (s *AffiliateService) creditInviteBalanceReward(ctx context.Context, inviterID, inviteeUserID int64) {
+	if s == nil || s.repo == nil || s.settingService == nil {
+		return
+	}
+	amount := s.settingService.GetAffiliateInviteBalanceReward(ctx)
+	if amount <= 0 || math.IsNaN(amount) || math.IsInf(amount, 0) {
+		return
+	}
+	newBalance, err := s.repo.CreditInviteBalanceReward(ctx, inviterID, inviteeUserID, amount)
+	if err != nil {
+		logger.LegacyPrintf("service.affiliate", "[Affiliate] Failed to credit invite balance reward: inviter=%d invitee=%d amount=%.8f err=%v", inviterID, inviteeUserID, amount, err)
+		return
+	}
+	s.invalidateAffiliateCaches(ctx, inviterID)
+	logger.LegacyPrintf("service.affiliate", "[Affiliate] Invite balance reward credited: inviter=%d invitee=%d amount=%.8f balance=%.8f", inviterID, inviteeUserID, amount, newBalance)
 }
 
 func (s *AffiliateService) AccrueInviteRebate(ctx context.Context, inviteeUserID int64, baseRechargeAmount float64) (float64, error) {

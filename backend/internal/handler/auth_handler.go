@@ -150,6 +150,15 @@ func (h *AuthHandler) isBackendModeEnabled(ctx context.Context) bool {
 	return h.settingSvc.IsBackendModeEnabled(ctx)
 }
 
+func registrationIPContext(c *gin.Context) context.Context {
+	base := c.Request.Context()
+	clientIP := strings.TrimSpace(ip.GetClientIP(c))
+	if clientIP == "" {
+		return base
+	}
+	return service.WithRegistrationIPInfo(base, service.RegistrationIPInfo{IPAddress: clientIP})
+}
+
 // Register handles user registration
 // POST /api/v1/auth/register
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -166,7 +175,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	_, user, err := h.authService.RegisterWithVerification(
-		c.Request.Context(),
+		registrationIPContext(c),
 		req.Email,
 		req.Password,
 		req.VerifyCode,

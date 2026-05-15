@@ -16,8 +16,8 @@ ALTER TABLE user_affiliate_ledger
 ALTER TABLE user_affiliate_ledger
     ADD COLUMN IF NOT EXISTS aff_history_quota_after DECIMAL(20,8) NULL;
 
-COMMENT ON COLUMN user_affiliate_ledger.source_order_id IS '产生该返利流水的充值订单；转余额或无法可靠回填的历史数据为 NULL';
-COMMENT ON COLUMN user_affiliate_ledger.balance_after IS '邀请返利转余额后的用户余额快照；无法取得时为 NULL';
+COMMENT ON COLUMN user_affiliate_ledger.source_order_id IS '产生该返利流水的充值订单；转余额、注册奖励或无法可靠回填的历史数据为 NULL';
+COMMENT ON COLUMN user_affiliate_ledger.balance_after IS '邀请返利转余额或注册奖励入账后的用户余额快照；无法取得时为 NULL';
 COMMENT ON COLUMN user_affiliate_ledger.aff_quota_after IS '邀请返利转余额后的可用返利额度快照；无法取得时为 NULL';
 COMMENT ON COLUMN user_affiliate_ledger.aff_frozen_quota_after IS '邀请返利转余额后的冻结返利额度快照；无法取得时为 NULL';
 COMMENT ON COLUMN user_affiliate_ledger.aff_history_quota_after IS '邀请返利转余额后的历史返利总额快照；无法取得时为 NULL';

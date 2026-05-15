@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/apicompat"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/tlsfingerprint"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
@@ -29,6 +30,40 @@ func (w *openAIChatFailingWriter) Write(p []byte) (int, error) {
 	}
 	w.writes++
 	return w.ResponseWriter.Write(p)
+}
+
+type sequentialHTTPUpstreamRecorder struct {
+	responses []*http.Response
+	errs      []error
+	requests  []*http.Request
+	bodies    [][]byte
+}
+
+func (u *sequentialHTTPUpstreamRecorder) Do(req *http.Request, proxyURL string, accountID int64, accountConcurrency int) (*http.Response, error) {
+	u.requests = append(u.requests, req)
+	if req != nil && req.Body != nil {
+		b, _ := io.ReadAll(req.Body)
+		u.bodies = append(u.bodies, append([]byte(nil), b...))
+		_ = req.Body.Close()
+		req.Body = io.NopCloser(bytes.NewReader(b))
+	}
+	if len(u.errs) > 0 {
+		err := u.errs[0]
+		u.errs = u.errs[1:]
+		if err != nil {
+			return nil, err
+		}
+	}
+	if len(u.responses) > 0 {
+		resp := u.responses[0]
+		u.responses = u.responses[1:]
+		return resp, nil
+	}
+	return nil, errors.New("no response configured")
+}
+
+func (u *sequentialHTTPUpstreamRecorder) DoWithTLS(req *http.Request, proxyURL string, accountID int64, accountConcurrency int, profile *tlsfingerprint.Profile) (*http.Response, error) {
+	return u.Do(req, proxyURL, accountID, accountConcurrency)
 }
 
 func TestNormalizeResponsesRequestServiceTier(t *testing.T) {
@@ -131,6 +166,112 @@ func TestForwardAsChatCompletions_UnknownModelDoesNotUseDefaultMappedModel(t *te
 	require.Equal(t, "gpt6", gjson.GetBytes(upstream.lastBody, "model").String())
 	require.NotEqual(t, "gpt-5.4", gjson.GetBytes(upstream.lastBody, "model").String())
 	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestForwardAsChatCompletions_RequestErrorRetriesBeforeSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	body := []byte(`{"model":"gpt-5.4","messages":[{"role":"user","content":"hello"}],"stream":false}`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := strings.Join([]string{
+		`data: {"type":"response.completed","response":{"id":"resp_retry","object":"response","model":"gpt-5.4","status":"completed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"ok"}]}],"usage":{"input_tokens":3,"output_tokens":2,"total_tokens":5}}}`,
+		"",
+		"data: [DONE]",
+		"",
+	}, "\n")
+	upstream := &sequentialHTTPUpstreamRecorder{
+		errs: []error{
+			errors.New("Post \"https://chatgpt.com/backend-api/codex/responses\": read tcp 172.18.0.4:60076->42.193.179.21:1081: read: connection reset by peer"),
+			errors.New("connection reset by peer"),
+			errors.New("unexpected EOF"),
+			nil,
+		},
+		responses: []*http.Response{{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"text/event-stream"}, "x-request-id": []string{"rid_retry_success"}},
+			Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+		}},
+	}
+
+	svc := &OpenAIGatewayService{httpUpstream: upstream}
+	account := &Account{
+		ID:          1,
+		Name:        "openai-oauth",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+		Credentials: map[string]any{
+			"access_token":       "oauth-token",
+			"chatgpt_account_id": "chatgpt-acc",
+		},
+	}
+
+	result, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, "", "gpt-5.4")
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Len(t, upstream.requests, 4)
+	require.Len(t, upstream.bodies, 4)
+	require.Equal(t, upstream.bodies[0], upstream.bodies[3], "retry must rebuild the same upstream body")
+
+	rawEvents, ok := c.Get(OpsUpstreamErrorsKey)
+	require.True(t, ok)
+	events, ok := rawEvents.([]*OpsUpstreamErrorEvent)
+	require.True(t, ok)
+	require.Len(t, events, 3)
+	require.Equal(t, "request_error", events[0].Kind)
+	require.Contains(t, events[0].Message, "connection reset by peer")
+}
+
+func TestForwardAsChatCompletions_RequestErrorExhaustionReturnsFailover(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	body := []byte(`{"model":"gpt-5.4","messages":[{"role":"user","content":"hello"}],"stream":false}`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstream := &sequentialHTTPUpstreamRecorder{
+		errs: []error{
+			errors.New("connection reset by peer"),
+			errors.New("connection reset by peer"),
+			errors.New("connection reset by peer"),
+			errors.New("connection reset by peer"),
+		},
+	}
+
+	svc := &OpenAIGatewayService{httpUpstream: upstream}
+	account := &Account{
+		ID:          1,
+		Name:        "openai-oauth",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+		Credentials: map[string]any{
+			"access_token":       "oauth-token",
+			"chatgpt_account_id": "chatgpt-acc",
+		},
+	}
+
+	result, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, "", "gpt-5.4")
+	require.Nil(t, result)
+	var failoverErr *UpstreamFailoverError
+	require.ErrorAs(t, err, &failoverErr)
+	require.Equal(t, http.StatusBadGateway, failoverErr.StatusCode)
+	require.False(t, c.Writer.Written(), "forward should not write a 502 before handler failover")
+	require.Len(t, upstream.requests, 4)
+
+	rawEvents, ok := c.Get(OpsUpstreamErrorsKey)
+	require.True(t, ok)
+	events, ok := rawEvents.([]*OpsUpstreamErrorEvent)
+	require.True(t, ok)
+	require.Len(t, events, 4)
+	require.Equal(t, "request_error:retry_exhausted", events[3].Kind)
 }
 
 func TestForwardAsChatCompletions_ClientDisconnectDrainsUpstreamUsage(t *testing.T) {

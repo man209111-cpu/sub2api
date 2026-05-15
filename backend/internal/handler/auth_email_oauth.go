@@ -362,7 +362,7 @@ func (h *AuthHandler) completeEmailOAuthRegistration(c *gin.Context, provider st
 	}
 
 	tokenPair, user, err := h.authService.RegisterVerifiedOAuthEmailAccount(
-		c.Request.Context(),
+		registrationIPContext(c),
 		strings.TrimSpace(session.ResolvedEmail),
 		req.Password,
 		strings.TrimSpace(req.InvitationCode),

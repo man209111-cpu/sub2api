@@ -243,57 +243,44 @@ func (s *OpenAIGatewayService) ForwardAsAnthropic(
 		return nil, fmt.Errorf("get access token: %w", err)
 	}
 
-	// 6. Build upstream request
-	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
-	upstreamReq, err := s.buildUpstreamRequest(upstreamCtx, c, account, responsesBody, token, isStream, promptCacheKey, false)
-	releaseUpstreamCtx()
-	if err != nil {
-		return nil, fmt.Errorf("build upstream request: %w", err)
-	}
-
-	// Override session_id with a deterministic UUID derived from the isolated
-	// session key, ensuring different API keys produce different upstream sessions.
-	if promptCacheKey != "" {
-		isolatedSessionID := generateSessionUUID(isolateOpenAISessionID(apiKeyID, promptCacheKey))
-		upstreamReq.Header.Set("session_id", isolatedSessionID)
-		if upstreamReq.Header.Get("conversation_id") != "" {
-			upstreamReq.Header.Set("conversation_id", isolatedSessionID)
-		}
-	}
-	if account.Type == AccountTypeOAuth {
-		// Anthropic Messages compatibility uses the ChatGPT Codex SSE endpoint.
-		// Match airgate-openai's request shape: the SSE endpoint does not need
-		// the Responses experimental beta header, and forcing originator can make
-		// ChatGPT select a different internal continuation path.
-		upstreamReq.Header.Del("OpenAI-Beta")
-		upstreamReq.Header.Del("originator")
-	}
-	if account.Type == AccountTypeOAuth && promptCacheKey != "" && strings.TrimSpace(c.GetHeader("conversation_id")) == "" {
-		upstreamReq.Header.Del("conversation_id")
-	}
-	if compatTurnState != "" && upstreamReq.Header.Get("x-codex-turn-state") == "" {
-		upstreamReq.Header.Set("x-codex-turn-state", compatTurnState)
-	}
-
 	// 7. Send request
 	proxyURL := ""
 	if account.Proxy != nil {
 		proxyURL = account.Proxy.URL()
 	}
-	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+	resp, err := s.doOpenAIUpstreamWithRequestRetry(ctx, c, account, proxyURL, false, func(upstreamCtx context.Context) (*http.Request, error) {
+		upstreamReq, err := s.buildUpstreamRequest(upstreamCtx, c, account, responsesBody, token, isStream, promptCacheKey, false)
+		if err != nil {
+			return nil, fmt.Errorf("build upstream request: %w", err)
+		}
+
+		// Override session_id with a deterministic UUID derived from the isolated
+		// session key, ensuring different API keys produce different upstream sessions.
+		if promptCacheKey != "" {
+			isolatedSessionID := generateSessionUUID(isolateOpenAISessionID(apiKeyID, promptCacheKey))
+			upstreamReq.Header.Set("session_id", isolatedSessionID)
+			if upstreamReq.Header.Get("conversation_id") != "" {
+				upstreamReq.Header.Set("conversation_id", isolatedSessionID)
+			}
+		}
+		if account.Type == AccountTypeOAuth {
+			// Anthropic Messages compatibility uses the ChatGPT Codex SSE endpoint.
+			// Match airgate-openai's request shape: the SSE endpoint does not need
+			// the Responses experimental beta header, and forcing originator can make
+			// ChatGPT select a different internal continuation path.
+			upstreamReq.Header.Del("OpenAI-Beta")
+			upstreamReq.Header.Del("originator")
+		}
+		if account.Type == AccountTypeOAuth && promptCacheKey != "" && strings.TrimSpace(c.GetHeader("conversation_id")) == "" {
+			upstreamReq.Header.Del("conversation_id")
+		}
+		if compatTurnState != "" && upstreamReq.Header.Get("x-codex-turn-state") == "" {
+			upstreamReq.Header.Set("x-codex-turn-state", compatTurnState)
+		}
+		return upstreamReq, nil
+	})
 	if err != nil {
-		safeErr := sanitizeUpstreamErrorMessage(err.Error())
-		setOpsUpstreamError(c, 0, safeErr, "")
-		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
-			AccountID:          account.ID,
-			AccountName:        account.Name,
-			UpstreamStatusCode: 0,
-			Kind:               "request_error",
-			Message:            safeErr,
-		})
-		writeAnthropicError(c, http.StatusBadGateway, "api_error", "Upstream request failed")
-		return nil, fmt.Errorf("upstream request failed: %s", safeErr)
+		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 

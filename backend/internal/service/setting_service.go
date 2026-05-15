@@ -1617,6 +1617,10 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 		settings.AffiliateRebatePerInviteeCap = AffiliateRebatePerInviteeCapDefault
 	}
 	updates[SettingKeyAffiliateRebatePerInviteeCap] = strconv.FormatFloat(settings.AffiliateRebatePerInviteeCap, 'f', 8, 64)
+	if settings.AffiliateInviteBalanceReward < 0 {
+		settings.AffiliateInviteBalanceReward = AffiliateInviteBalanceRewardDefault
+	}
+	updates[SettingKeyAffiliateInviteBalanceReward] = strconv.FormatFloat(settings.AffiliateInviteBalanceReward, 'f', 8, 64)
 	updates[SettingKeyDefaultUserRPMLimit] = strconv.Itoa(settings.DefaultUserRPMLimit)
 	defaultSubsJSON, err := json.Marshal(settings.DefaultSubscriptions)
 	if err != nil {
@@ -2136,6 +2140,20 @@ func (s *SettingService) GetAffiliateRebatePerInviteeCap(ctx context.Context) fl
 	return cap
 }
 
+// GetAffiliateInviteBalanceReward returns the fixed reward credited directly to
+// the inviter's account balance when an invitee binds successfully.
+func (s *SettingService) GetAffiliateInviteBalanceReward(ctx context.Context) float64 {
+	raw, err := s.settingRepo.GetValue(ctx, SettingKeyAffiliateInviteBalanceReward)
+	if err != nil {
+		return AffiliateInviteBalanceRewardDefault
+	}
+	amount, err := strconv.ParseFloat(strings.TrimSpace(raw), 64)
+	if err != nil || amount < 0 || math.IsNaN(amount) || math.IsInf(amount, 0) {
+		return AffiliateInviteBalanceRewardDefault
+	}
+	return amount
+}
+
 // IsPasswordResetEnabled 检查是否启用密码重置功能
 // 要求：必须同时开启邮件验证
 func (s *SettingService) IsPasswordResetEnabled(ctx context.Context) bool {
@@ -2412,6 +2430,7 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyAffiliateRebateFreezeHours:               strconv.Itoa(AffiliateRebateFreezeHoursDefault),
 		SettingKeyAffiliateRebateDurationDays:              strconv.Itoa(AffiliateRebateDurationDaysDefault),
 		SettingKeyAffiliateRebatePerInviteeCap:             strconv.FormatFloat(AffiliateRebatePerInviteeCapDefault, 'f', 2, 64),
+		SettingKeyAffiliateInviteBalanceReward:             strconv.FormatFloat(AffiliateInviteBalanceRewardDefault, 'f', 2, 64),
 		SettingKeyDefaultUserRPMLimit:                      "0",
 		SettingKeyDefaultSubscriptions:                     "[]",
 		SettingKeyAuthSourceDefaultEmailBalance:            "0",
@@ -2586,6 +2605,9 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	}
 	if perInviteeCap, err := strconv.ParseFloat(settings[SettingKeyAffiliateRebatePerInviteeCap], 64); err == nil && perInviteeCap >= 0 {
 		result.AffiliateRebatePerInviteeCap = perInviteeCap
+	}
+	if inviteReward, err := strconv.ParseFloat(settings[SettingKeyAffiliateInviteBalanceReward], 64); err == nil && inviteReward >= 0 {
+		result.AffiliateInviteBalanceReward = inviteReward
 	}
 	result.DefaultSubscriptions = parseDefaultSubscriptions(settings[SettingKeyDefaultSubscriptions])
 

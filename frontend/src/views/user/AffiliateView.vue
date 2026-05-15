@@ -8,7 +8,7 @@
       </div>
 
       <template v-else-if="detail">
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div class="card p-5">
             <p class="flex items-center gap-1.5 text-sm text-gray-500 dark:text-dark-400">
               <Icon name="dollar" size="sm" class="text-primary-500" />
@@ -19,6 +19,18 @@
             </p>
             <p class="mt-1 text-xs text-gray-400 dark:text-dark-500">
               {{ t('affiliate.stats.rebateRateHint') }}
+            </p>
+          </div>
+          <div class="card p-5">
+            <p class="flex items-center gap-1.5 text-sm text-gray-500 dark:text-dark-400">
+              <Icon name="gift" size="sm" class="text-emerald-500" />
+              {{ t('affiliate.stats.inviteBalanceReward') }}
+            </p>
+            <p class="mt-2 text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
+              {{ formatCurrency(detail.invite_balance_reward || 0) }}
+            </p>
+            <p class="mt-1 text-xs text-gray-400 dark:text-dark-500">
+              {{ t('affiliate.stats.inviteBalanceRewardHint') }}
             </p>
           </div>
           <div class="card p-5">
@@ -74,12 +86,15 @@
 
           <div class="mt-5 rounded-xl border border-primary-200 bg-primary-50 p-4 dark:border-primary-900/40 dark:bg-primary-900/20">
             <p class="text-sm font-medium text-primary-800 dark:text-primary-200">{{ t('affiliate.tips.title') }}</p>
-            <ul class="mt-2 space-y-1 text-sm text-primary-700 dark:text-primary-300">
-              <li>1. {{ t('affiliate.tips.line1') }}</li>
-              <li>2. {{ t('affiliate.tips.line2', { rate: `${formattedRebateRate}%` }) }}</li>
-              <li>3. {{ t('affiliate.tips.line3') }}</li>
-              <li v-if="detail.aff_frozen_quota > 0">4. {{ t('affiliate.tips.line4') }}</li>
-            </ul>
+            <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm text-primary-700 dark:text-primary-300">
+              <li>{{ t('affiliate.tips.line1') }}</li>
+              <li v-if="hasInviteBalanceReward">
+                {{ t('affiliate.tips.signupReward', { amount: formatCurrency(detail.invite_balance_reward) }) }}
+              </li>
+              <li>{{ t('affiliate.tips.line2', { rate: `${formattedRebateRate}%` }) }}</li>
+              <li>{{ t('affiliate.tips.line3') }}</li>
+              <li v-if="detail.aff_frozen_quota > 0">{{ t('affiliate.tips.line4') }}</li>
+            </ol>
           </div>
         </div>
 
@@ -174,6 +189,8 @@ const formattedRebateRate = computed(() => {
   const rounded = Math.round(v * 100) / 100
   return Number.isInteger(rounded) ? String(rounded) : rounded.toString()
 })
+
+const hasInviteBalanceReward = computed(() => (detail.value?.invite_balance_reward ?? 0) > 0)
 
 function formatCount(value: number): string {
   return value.toLocaleString()

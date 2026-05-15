@@ -44,3 +44,18 @@ export function isHomeHeaderMenuPlacement(
 export function getCustomMenuRoute(id: string): string {
   return `/custom/${encodeURIComponent(id)}`
 }
+
+export function getHomeHeaderMenuHref(
+  item: Pick<CustomMenuItem, 'id' | 'url' | 'page_slug'>,
+): string {
+  if (item.page_slug || item.url?.startsWith('md:')) {
+    return getCustomMenuRoute(item.id)
+  }
+
+  const rawUrl = item.url?.trim()
+  if (rawUrl) {
+    return rawUrl
+  }
+
+  return getCustomMenuRoute(item.id)
+}

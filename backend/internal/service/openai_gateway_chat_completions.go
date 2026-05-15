@@ -205,37 +205,23 @@ func (s *OpenAIGatewayService) ForwardAsChatCompletions(
 		return nil, fmt.Errorf("get access token: %w", err)
 	}
 
-	// 6. Build upstream request
-	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
-	upstreamReq, err := s.buildUpstreamRequest(upstreamCtx, c, account, responsesBody, token, true, promptCacheKey, false)
-	releaseUpstreamCtx()
-	if err != nil {
-		return nil, fmt.Errorf("build upstream request: %w", err)
-	}
-
-	if promptCacheKey != "" {
-		upstreamReq.Header.Set("session_id", generateSessionUUID(promptCacheKey))
-	}
-
 	// 7. Send request
 	proxyURL := ""
 	if account.Proxy != nil {
 		proxyURL = account.Proxy.URL()
 	}
-	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+	resp, err := s.doOpenAIUpstreamWithRequestRetry(ctx, c, account, proxyURL, false, func(upstreamCtx context.Context) (*http.Request, error) {
+		upstreamReq, err := s.buildUpstreamRequest(upstreamCtx, c, account, responsesBody, token, true, promptCacheKey, false)
+		if err != nil {
+			return nil, fmt.Errorf("build upstream request: %w", err)
+		}
+		if promptCacheKey != "" {
+			upstreamReq.Header.Set("session_id", generateSessionUUID(promptCacheKey))
+		}
+		return upstreamReq, nil
+	})
 	if err != nil {
-		safeErr := sanitizeUpstreamErrorMessage(err.Error())
-		setOpsUpstreamError(c, 0, safeErr, "")
-		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-			Platform:           account.Platform,
-			AccountID:          account.ID,
-			AccountName:        account.Name,
-			UpstreamStatusCode: 0,
-			Kind:               "request_error",
-			Message:            safeErr,
-		})
-		writeChatCompletionsError(c, http.StatusBadGateway, "upstream_error", "Upstream request failed")
-		return nil, fmt.Errorf("upstream request failed: %s", safeErr)
+		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 

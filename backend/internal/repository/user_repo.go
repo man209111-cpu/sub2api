@@ -98,6 +98,12 @@ func (r *userRepository) Create(ctx context.Context, userIn *service.User) error
 	if err != nil {
 		return translatePersistenceError(err, nil, service.ErrEmailExists)
 	}
+	if info := service.RegistrationIPInfoFromContext(ctx); strings.TrimSpace(info.IPAddress) != "" {
+		if err := updateUserRegistrationIPInfo(txCtx, txClient, created.ID, info); err != nil {
+			return err
+		}
+		userIn.RegisterIPAddress = strings.TrimSpace(info.IPAddress)
+	}
 
 	if err := r.syncUserAllowedGroupsWithClient(txCtx, txClient, created.ID, userIn.AllowedGroups); err != nil {
 		return err
@@ -116,6 +122,10 @@ func (r *userRepository) Create(ctx context.Context, userIn *service.User) error
 	return nil
 }
 
+func (r *userRepository) UpdateRegistrationIPInfo(ctx context.Context, userID int64, info service.RegistrationIPInfo) error {
+	return updateUserRegistrationIPInfo(ctx, r.client, userID, info)
+}
+
 func (r *userRepository) GetByID(ctx context.Context, id int64) (*service.User, error) {
 	m, err := r.client.User.Query().Where(dbuser.IDEQ(id)).Only(ctx)
 	if err != nil {
@@ -123,6 +133,9 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*service.User, 
 	}
 
 	out := userEntityToService(m)
+	if err := r.loadRegistrationIPInfo(ctx, map[int64]*service.User{id: out}); err != nil {
+		return nil, err
+	}
 	groups, err := r.loadAllowedGroups(ctx, []int64{id})
 	if err != nil {
 		return nil, err
@@ -150,6 +163,9 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*service
 	m := matches[0]
 
 	out := userEntityToService(m)
+	if err := r.loadRegistrationIPInfo(ctx, map[int64]*service.User{m.ID: out}); err != nil {
+		return nil, err
+	}
 	groups, err := r.loadAllowedGroups(ctx, []int64{m.ID})
 	if err != nil {
 		return nil, err
@@ -474,6 +490,9 @@ func (r *userRepository) ListWithFilters(ctx context.Context, params pagination.
 		outUsers = append(outUsers, *u)
 		userMap[u.ID] = &outUsers[len(outUsers)-1]
 	}
+	if err := r.loadRegistrationIPInfo(ctx, userMap); err != nil {
+		return nil, nil, err
+	}
 
 	shouldLoadSubscriptions := filters.IncludeSubscriptions == nil || *filters.IncludeSubscriptions
 	if shouldLoadSubscriptions {
@@ -507,6 +526,90 @@ func (r *userRepository) ListWithFilters(ctx context.Context, params pagination.
 	}
 
 	return outUsers, paginationResultFromTotal(int64(total), params), nil
+}
+
+func updateUserRegistrationIPInfo(ctx context.Context, client *dbent.Client, userID int64, info service.RegistrationIPInfo) error {
+	if userID <= 0 || strings.TrimSpace(info.IPAddress) == "" {
+		return nil
+	}
+	_, err := client.ExecContext(ctx, `
+UPDATE users
+SET register_ip_address = $1,
+    register_ip_country = $2,
+    register_ip_country_code = $3,
+    register_ip_region = $4,
+    register_ip_city = $5,
+    register_ip_location = $6,
+    updated_at = updated_at
+WHERE id = $7`,
+		strings.TrimSpace(info.IPAddress),
+		strings.TrimSpace(info.Country),
+		strings.TrimSpace(info.CountryCode),
+		strings.TrimSpace(info.Region),
+		strings.TrimSpace(info.City),
+		strings.TrimSpace(info.Location),
+		userID,
+	)
+	if err != nil {
+		return fmt.Errorf("update user registration ip info: %w", err)
+	}
+	return nil
+}
+
+func (r *userRepository) loadRegistrationIPInfo(ctx context.Context, users map[int64]*service.User) error {
+	if len(users) == 0 {
+		return nil
+	}
+	ids := make([]int64, 0, len(users))
+	for id := range users {
+		ids = append(ids, id)
+	}
+	exec := txAwareSQLExecutor(ctx, r.sql, r.client)
+	if exec == nil {
+		return fmt.Errorf("sql executor is not configured")
+	}
+	rows, err := exec.QueryContext(ctx, `
+SELECT id,
+       register_ip_address,
+       register_ip_country,
+       register_ip_country_code,
+       register_ip_region,
+       register_ip_city,
+       register_ip_location
+FROM users
+WHERE id = ANY($1)`, pq.Array(ids))
+	if err != nil {
+		if isRegistrationIPInfoSchemaMissing(err) {
+			return nil
+		}
+		return fmt.Errorf("load user registration ip info: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	for rows.Next() {
+		var id int64
+		var ipAddress, country, countryCode, region, city, location string
+		if err := rows.Scan(&id, &ipAddress, &country, &countryCode, &region, &city, &location); err != nil {
+			return err
+		}
+		if u, ok := users[id]; ok && u != nil {
+			u.RegisterIPAddress = ipAddress
+			u.RegisterIPCountry = country
+			u.RegisterIPCountryCode = countryCode
+			u.RegisterIPRegion = region
+			u.RegisterIPCity = city
+			u.RegisterIPLocation = location
+		}
+	}
+	return rows.Err()
+}
+
+func isRegistrationIPInfoSchemaMissing(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "no such column: register_ip_")
 }
 
 func userListOrder(params pagination.PaginationParams) []func(*entsql.Selector) {
