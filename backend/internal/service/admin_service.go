@@ -33,6 +33,7 @@ type AdminService interface {
 	UpdateUser(ctx context.Context, id int64, input *UpdateUserInput) (*User, error)
 	DeleteUser(ctx context.Context, id int64) error
 	UpdateUserBalance(ctx context.Context, userID int64, balance float64, operation string, notes string) (*User, error)
+	RefreshUserRegistrationIPLocation(ctx context.Context, userID int64) (*User, error)
 	BatchUpdateConcurrency(ctx context.Context, userIDs []int64, value int, mode string) (int, error)
 	GetUserAPIKeys(ctx context.Context, userID int64, page, pageSize int, sortBy, sortOrder string) ([]APIKey, int64, error)
 	GetUserUsageStats(ctx context.Context, userID int64, period string) (any, error)
@@ -916,6 +917,25 @@ func (s *adminServiceImpl) UpdateUserBalance(ctx context.Context, userID int64, 
 	return user, nil
 }
 
+func (s *adminServiceImpl) RefreshUserRegistrationIPLocation(ctx context.Context, userID int64) (*User, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	ipAddress := strings.TrimSpace(user.RegisterIPAddress)
+	if ipAddress == "" {
+		return nil, infraerrors.BadRequest("REGISTER_IP_EMPTY", "registration IP is empty")
+	}
+	info, err := lookupRegistrationIPInfo(ctx, ipAddress)
+	if err != nil {
+		return nil, err
+	}
+	if err := updateUserRegistrationIPInfoWithRepo(ctx, s.userRepo, userID, info); err != nil {
+		return nil, err
+	}
+	return s.GetUser(ctx, userID)
+}
+
 func (s *adminServiceImpl) GetUserAPIKeys(ctx context.Context, userID int64, page, pageSize int, sortBy, sortOrder string) ([]APIKey, int64, error) {
 	params := pagination.PaginationParams{Page: page, PageSize: pageSize, SortBy: sortBy, SortOrder: sortOrder}
 	keys, result, err := s.apiKeyRepo.ListByUserID(ctx, userID, params, APIKeyListFilters{})
@@ -1133,7 +1153,7 @@ SELECT id,
        created_at
 FROM user_affiliate_ledger
 WHERE user_id = $1
-  AND action = 'transfer'
+  AND action IN ('transfer', 'signup_reward')
 ORDER BY created_at DESC, id DESC
 OFFSET $2
 LIMIT $3`, userID, params.Offset(), params.Limit())
@@ -1179,7 +1199,7 @@ func countAffiliateBalanceHistory(ctx context.Context, client *dbent.Client, use
 SELECT COUNT(*)
 FROM user_affiliate_ledger
 WHERE user_id = $1
-  AND action = 'transfer'`, userID)
+  AND action IN ('transfer', 'signup_reward')`, userID)
 	if err != nil {
 		return 0, err
 	}

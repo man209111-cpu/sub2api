@@ -24,7 +24,7 @@ CREATE INDEX IF NOT EXISTS idx_user_affiliate_ledger_user_id ON user_affiliate_l
 CREATE INDEX IF NOT EXISTS idx_user_affiliate_ledger_action ON user_affiliate_ledger(action);
 
 COMMENT ON TABLE user_affiliate_ledger IS '邀请返利资金流水（累计/转入）';
-COMMENT ON COLUMN user_affiliate_ledger.action IS 'accrue|transfer';
+COMMENT ON COLUMN user_affiliate_ledger.action IS 'accrue|transfer|signup_reward';
 
 -- 3) Enforce idempotency at DB layer for payment audit actions.
 WITH ranked AS (

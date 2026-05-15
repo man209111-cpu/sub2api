@@ -813,6 +813,9 @@ func (s *AuthService) postAuthUserBootstrap(ctx context.Context, user *User, sig
 	if touchLogin {
 		s.touchUserLogin(ctx, user.ID)
 	}
+	if info := RegistrationIPInfoFromContext(ctx); strings.TrimSpace(info.IPAddress) != "" {
+		s.refreshRegistrationIPLocationInBackground(user.ID, info.IPAddress)
+	}
 }
 
 func (s *AuthService) updateUserSignupSource(ctx context.Context, userID int64, signupSource string) {

@@ -276,6 +276,39 @@
             </div>
           </template>
 
+          <template #cell-register_ip="{ row }">
+            <div class="max-w-[160px] truncate font-mono text-sm text-gray-700 dark:text-gray-300" :title="row.register_ip_address || '-'">
+              {{ row.register_ip_address || '-' }}
+            </div>
+          </template>
+
+          <template #cell-register_ip_location="{ row }">
+            <div class="max-w-[180px] text-sm">
+              <div
+                v-if="row.register_ip_location"
+                class="truncate text-gray-700 dark:text-gray-300"
+                :title="row.register_ip_location"
+              >
+                {{ row.register_ip_location }}
+              </div>
+              <button
+                v-else-if="row.register_ip_address"
+                type="button"
+                class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 text-gray-500 transition-colors hover:border-primary-300 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-dark-600 dark:text-dark-300 dark:hover:border-primary-500 dark:hover:text-primary-400"
+                :disabled="refreshingRegisterIPUserIds.has(row.id)"
+                :title="t('admin.users.fetchRegisterIpLocation')"
+                @click.stop="refreshRegisterIPLocation(row)"
+              >
+                <Icon
+                  name="refresh"
+                  size="xs"
+                  :class="refreshingRegisterIPUserIds.has(row.id) ? 'animate-spin' : ''"
+                />
+              </button>
+              <span v-else class="text-gray-400">-</span>
+            </div>
+          </template>
+
           <!-- Dynamic attribute columns -->
           <template
             v-for="def in attributeDefinitions.filter(d => d.enabled)"
@@ -703,6 +736,8 @@ const allColumns = computed<Column[]>(() => [
   { key: 'id', label: t('admin.users.columns.id'), sortable: true },
   { key: 'username', label: t('admin.users.columns.username'), sortable: true },
   { key: 'notes', label: t('admin.users.columns.notes'), sortable: false },
+  { key: 'register_ip', label: t('admin.users.columns.registerIp'), sortable: false },
+  { key: 'register_ip_location', label: t('admin.users.columns.registerIpLocation'), sortable: false },
   // Dynamic attribute columns
   ...attributeColumns.value,
   { key: 'role', label: t('admin.users.columns.role'), sortable: true },
@@ -728,7 +763,7 @@ const toggleableColumns = computed(() =>
 const hiddenColumns = reactive<Set<string>>(new Set())
 
 // Default hidden columns (columns hidden by default on first load)
-const DEFAULT_HIDDEN_COLUMNS = ['notes', 'groups', 'subscriptions', 'usage', 'concurrency']
+const DEFAULT_HIDDEN_COLUMNS = ['notes', 'register_ip', 'register_ip_location', 'groups', 'subscriptions', 'usage', 'concurrency']
 const REMOVED_COLUMNS = new Set(['last_login_at'])
 const FORCED_VISIBLE_COLUMNS = new Set(['last_active_at'])
 
@@ -1124,6 +1159,7 @@ const balanceOperation = ref<'add' | 'subtract'>('add')
 // Balance History modal state
 const showBalanceHistoryModal = ref(false)
 const balanceHistoryUser = ref<AdminUser | null>(null)
+const refreshingRegisterIPUserIds = ref(new Set<number>())
 
 // 计算剩余天数
 const getDaysRemaining = (expiresAt: string): number => {
@@ -1208,6 +1244,28 @@ const loadUsers = async () => {
     if (abortController === currentAbortController) {
       loading.value = false
     }
+  }
+}
+
+const refreshRegisterIPLocation = async (user: AdminUser) => {
+  if (!user?.id || refreshingRegisterIPUserIds.value.has(user.id)) {
+    return
+  }
+  refreshingRegisterIPUserIds.value = new Set(refreshingRegisterIPUserIds.value).add(user.id)
+  try {
+    const updated = await adminAPI.users.refreshRegisterIPLocation(user.id)
+    const index = users.value.findIndex(item => item.id === updated.id)
+    if (index !== -1) {
+      users.value.splice(index, 1, { ...users.value[index], ...updated })
+    }
+    appStore.showSuccess(t('admin.users.registerIpLocationUpdated'))
+  } catch (error: any) {
+    const message = error.response?.data?.detail || error.response?.data?.message || error.message || t('admin.users.failedToFetchRegisterIpLocation')
+    appStore.showError(message)
+  } finally {
+    const next = new Set(refreshingRegisterIPUserIds.value)
+    next.delete(user.id)
+    refreshingRegisterIPUserIds.value = next
   }
 }
 

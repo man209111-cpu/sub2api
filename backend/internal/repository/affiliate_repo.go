@@ -162,6 +162,57 @@ VALUES ($1, 'accrue', $2, $3, $4, NOW(), NOW())`, inviterID, amount, inviteeUser
 	return applied, nil
 }
 
+func (r *affiliateRepository) CreditInviteBalanceReward(ctx context.Context, inviterID, inviteeUserID int64, amount float64) (float64, error) {
+	if amount <= 0 {
+		return 0, nil
+	}
+
+	var newBalance float64
+	err := r.withTx(ctx, func(txCtx context.Context, txClient *dbent.Client) error {
+		affected, err := txClient.User.Update().
+			Where(user.IDEQ(inviterID)).
+			AddBalance(amount).
+			AddTotalRecharged(amount).
+			Save(txCtx)
+		if err != nil {
+			return fmt.Errorf("credit invite balance reward: %w", err)
+		}
+		if affected == 0 {
+			return service.ErrUserNotFound
+		}
+
+		newBalance, err = queryUserBalance(txCtx, txClient, inviterID)
+		if err != nil {
+			return err
+		}
+
+		if _, err = txClient.ExecContext(txCtx, `
+INSERT INTO user_affiliate_ledger (
+    user_id,
+    action,
+    amount,
+    source_user_id,
+    balance_after,
+    created_at,
+    updated_at
+)
+VALUES ($1, 'signup_reward', $2, $3, $4, NOW(), NOW())`,
+			inviterID,
+			amount,
+			inviteeUserID,
+			newBalance,
+		); err != nil {
+			return fmt.Errorf("insert affiliate signup reward ledger: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return newBalance, nil
+}
+
 func (r *affiliateRepository) GetAccruedRebateFromInvitee(ctx context.Context, inviterID, inviteeUserID int64) (float64, error) {
 	client := clientFromContext(ctx, r.client)
 	rows, err := client.QueryContext(ctx,

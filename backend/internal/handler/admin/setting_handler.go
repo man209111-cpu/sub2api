@@ -204,6 +204,7 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		AffiliateRebateFreezeHours:             settings.AffiliateRebateFreezeHours,
 		AffiliateRebateDurationDays:            settings.AffiliateRebateDurationDays,
 		AffiliateRebatePerInviteeCap:           settings.AffiliateRebatePerInviteeCap,
+		AffiliateInviteBalanceReward:           settings.AffiliateInviteBalanceReward,
 		DefaultUserRPMLimit:                    settings.DefaultUserRPMLimit,
 		DefaultSubscriptions:                   defaultSubscriptions,
 		EnableModelFallback:                    settings.EnableModelFallback,
@@ -452,6 +453,7 @@ type UpdateSettingsRequest struct {
 	AffiliateRebateFreezeHours               *int                              `json:"affiliate_rebate_freeze_hours"`
 	AffiliateRebateDurationDays              *int                              `json:"affiliate_rebate_duration_days"`
 	AffiliateRebatePerInviteeCap             *float64                          `json:"affiliate_rebate_per_invitee_cap"`
+	AffiliateInviteBalanceReward             *float64                          `json:"affiliate_invite_balance_reward"`
 	DefaultUserRPMLimit                      int                               `json:"default_user_rpm_limit"`
 	DefaultSubscriptions                     []dto.DefaultSubscriptionSetting  `json:"default_subscriptions"`
 	AuthSourceDefaultEmailBalance            *float64                          `json:"auth_source_default_email_balance"`
@@ -640,6 +642,13 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 	}
 	if affiliateRebatePerInviteeCap < 0 {
 		affiliateRebatePerInviteeCap = service.AffiliateRebatePerInviteeCapDefault
+	}
+	affiliateInviteBalanceReward := previousSettings.AffiliateInviteBalanceReward
+	if req.AffiliateInviteBalanceReward != nil {
+		affiliateInviteBalanceReward = *req.AffiliateInviteBalanceReward
+	}
+	if affiliateInviteBalanceReward < 0 {
+		affiliateInviteBalanceReward = service.AffiliateInviteBalanceRewardDefault
 	}
 	// 通用表格配置：兼容旧客户端未传字段时保留当前值。
 	if req.TableDefaultPageSize <= 0 {
@@ -1374,6 +1383,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		AffiliateRebateFreezeHours:       affiliateRebateFreezeHours,
 		AffiliateRebateDurationDays:      affiliateRebateDurationDays,
 		AffiliateRebatePerInviteeCap:     affiliateRebatePerInviteeCap,
+		AffiliateInviteBalanceReward:     affiliateInviteBalanceReward,
 		DefaultUserRPMLimit:              req.DefaultUserRPMLimit,
 		DefaultSubscriptions:             defaultSubscriptions,
 		EnableModelFallback:              req.EnableModelFallback,
@@ -1758,6 +1768,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		AffiliateRebateFreezeHours:             updatedSettings.AffiliateRebateFreezeHours,
 		AffiliateRebateDurationDays:            updatedSettings.AffiliateRebateDurationDays,
 		AffiliateRebatePerInviteeCap:           updatedSettings.AffiliateRebatePerInviteeCap,
+		AffiliateInviteBalanceReward:           updatedSettings.AffiliateInviteBalanceReward,
 		DefaultUserRPMLimit:                    updatedSettings.DefaultUserRPMLimit,
 		DefaultSubscriptions:                   updatedDefaultSubscriptions,
 		EnableModelFallback:                    updatedSettings.EnableModelFallback,
@@ -2098,6 +2109,9 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 	}
 	if before.AffiliateRebatePerInviteeCap != after.AffiliateRebatePerInviteeCap {
 		changed = append(changed, "affiliate_rebate_per_invitee_cap")
+	}
+	if before.AffiliateInviteBalanceReward != after.AffiliateInviteBalanceReward {
+		changed = append(changed, "affiliate_invite_balance_reward")
 	}
 	if !equalDefaultSubscriptions(before.DefaultSubscriptions, after.DefaultSubscriptions) {
 		changed = append(changed, "default_subscriptions")

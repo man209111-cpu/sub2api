@@ -147,6 +147,7 @@ describe('admin UsersView', () => {
     const visibleColumns = columns.split(',')
     expect(visibleColumns.slice(-4, -1)).toEqual(['last_active_at', 'last_used_at', 'created_at'])
     expect(visibleColumns).not.toContain('last_login_at')
+    expect(visibleColumns).not.toContain('register_ip')
 
     await wrapper.get('[data-test="sort-last-used"]').trigger('click')
     await flushPromises()

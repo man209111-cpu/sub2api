@@ -167,6 +167,16 @@ export async function updateBalance(
 }
 
 /**
+ * Refresh registration IP location for a user.
+ * @param id - User ID
+ * @returns Updated user
+ */
+export async function refreshRegisterIPLocation(id: number): Promise<AdminUser> {
+  const { data } = await apiClient.post<AdminUser>(`/admin/users/${id}/register-ip-location`)
+  return data
+}
+
+/**
  * Update user concurrency
  * @param id - User ID
  * @param concurrency - New concurrency limit
@@ -304,6 +314,7 @@ export const usersAPI = {
   update,
   delete: deleteUser,
   updateBalance,
+  refreshRegisterIPLocation,
   updateConcurrency,
   toggleStatus,
   getUserApiKeys,

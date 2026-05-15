@@ -1010,6 +1010,8 @@ export default {
     stats: {
       rebateRate: '我的返利比例',
       rebateRateHint: '被邀请用户每次充值后你可获得的返利比例',
+      inviteBalanceReward: '邀请注册赠送余额',
+      inviteBalanceRewardHint: '新用户通过你的邀请注册后直接进入余额',
       invitedUsers: '邀请人数',
       availableQuota: '可转返利额度',
       frozenQuota: '冻结中',
@@ -1037,6 +1039,7 @@ export default {
     tips: {
       title: '使用说明',
       line1: '将邀请码或邀请链接分享给新用户。',
+      signupReward: '新用户通过你的邀请链接注册后，你将获得 {amount} 余额奖励。',
       line2: '被邀请用户充值后，你可获得 {rate} 的返利额度。',
       line3: '返利额度可随时转入账户余额。',
       line4: '新产生的返利需要经过冻结期后才能提现。'
@@ -1755,12 +1758,17 @@ export default {
       copyPassword: '复制密码',
       creating: '创建中...',
       updating: '更新中...',
+      fetchRegisterIpLocation: '获取注册 IP 归属地',
+      registerIpLocationUpdated: '注册 IP 归属地已更新',
+      failedToFetchRegisterIpLocation: '获取注册 IP 归属地失败',
       columns: {
         user: '用户',
         id: 'ID',
         email: '邮箱',
         username: '用户名',
         notes: '备注',
+        registerIp: '注册 IP',
+        registerIpLocation: '注册归属地',
         role: '角色',
         groups: '分组',
         subscriptions: '订阅分组',
@@ -5299,6 +5307,8 @@ export default {
           durationDaysDesc: '被邀请用户注册后多少天内的充值产生返利。0 = 永久有效。',
           perInviteeCap: '单人返利上限',
           perInviteeCapDesc: '每个被邀请用户最多产生的返利总额。0 = 无上限。',
+          inviteBalanceReward: '邀请注册奖励余额',
+          inviteBalanceRewardDesc: '被邀请用户成功注册并绑定后，直接进入邀请人账户余额的固定金额。0 = 关闭。',
           customUsers: {
             title: '专属用户配置',
             description: '为指定用户设置专属邀请码或专属返利比例。仅展示已设置过专属配置的用户。',

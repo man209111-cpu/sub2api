@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -25,13 +26,19 @@ type User struct {
 	TokenVersion   int64 // Incremented on password change to invalidate existing tokens
 	// TokenVersionResolved indicates TokenVersion already contains the fingerprint-derived
 	// value expected in JWT claims and refresh-token state.
-	TokenVersionResolved bool
-	SignupSource         string
-	LastLoginAt          *time.Time
-	LastActiveAt         *time.Time
-	LastUsedAt           *time.Time
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	TokenVersionResolved  bool
+	SignupSource          string
+	RegisterIPAddress     string
+	RegisterIPCountry     string
+	RegisterIPCountryCode string
+	RegisterIPRegion      string
+	RegisterIPCity        string
+	RegisterIPLocation    string
+	LastLoginAt           *time.Time
+	LastActiveAt          *time.Time
+	LastUsedAt            *time.Time
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 
 	// GroupRates 用户专属分组倍率配置
 	// map[groupID]rateMultiplier
@@ -60,6 +67,34 @@ type User struct {
 
 	APIKeys       []APIKey
 	Subscriptions []UserSubscription
+}
+
+type registrationIPContextKey struct{}
+
+type RegistrationIPInfo struct {
+	IPAddress   string
+	Country     string
+	CountryCode string
+	Region      string
+	City        string
+	Location    string
+}
+
+func WithRegistrationIPInfo(ctx context.Context, info RegistrationIPInfo) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithValue(ctx, registrationIPContextKey{}, info)
+}
+
+func RegistrationIPInfoFromContext(ctx context.Context) RegistrationIPInfo {
+	if ctx == nil {
+		return RegistrationIPInfo{}
+	}
+	if info, ok := ctx.Value(registrationIPContextKey{}).(RegistrationIPInfo); ok {
+		return info
+	}
+	return RegistrationIPInfo{}
 }
 
 func (u *User) IsAdmin() bool {
