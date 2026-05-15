@@ -89,6 +89,13 @@ services:
       - GEMINI_OAUTH_SCOPES=${GEMINI_OAUTH_SCOPES:-}
       - GEMINI_QUOTA_POLICY=${GEMINI_QUOTA_POLICY:-}
 
+      # =======================================================================
+      # Update Configuration (在线更新配置)
+      # =======================================================================
+      - UPDATE_GITHUB_REPO=${UPDATE_GITHUB_REPO:-man209111-cpu/sub2api}
+      - UPDATE_GITHUB_MIRROR_BASE_URL=${UPDATE_GITHUB_MIRROR_BASE_URL:-}
+      - UPDATE_PROXY_URL=${UPDATE_PROXY_URL:-}
+
       # Built-in OAuth client secrets (optional)
       # SECURITY: This repo does not embed third-party client_secret.
       - GEMINI_CLI_OAUTH_CLIENT_SECRET=${GEMINI_CLI_OAUTH_CLIENT_SECRET:-}

@@ -1084,6 +1084,14 @@ update:
   # GitHub repository used for online update checks and binary downloads.
   # 在线更新检查和二进制下载使用的 GitHub 仓库。
   github_repo: "man209111-cpu/sub2api"
+  # GitHub mirror base URL for online updates.
+  # 在线更新使用的 GitHub 镜像站前缀。
+  # Examples:
+  #   - "https://gh.llkk.cc"
+  #   - "https://mirror.example.com/{url}"
+  # Leave empty for direct GitHub URLs.
+  # 留空表示使用原始 GitHub 地址。
+  github_mirror_base_url: ""
   # Proxy URL for accessing GitHub (used for online updates and pricing data)
   # 用于访问 GitHub 的代理地址（用于在线更新和定价数据获取）
   # Supports: http, https, socks5, socks5h

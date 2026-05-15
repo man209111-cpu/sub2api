@@ -245,6 +245,42 @@ func (s *GitHubReleaseServiceSuite) TestFetchLatestRelease_Success() {
 	require.Equal(s.T(), "app-linux-amd64.tar.gz", release.Assets[0].Name)
 }
 
+func (s *GitHubReleaseServiceSuite) TestFetchLatestRelease_UsesMirrorBaseURL() {
+	releaseJSON := `{
+		"tag_name": "v1.0.0",
+		"name": "Release 1.0.0",
+		"body": "Release notes",
+		"html_url": "https://github.com/test/repo/releases/v1.0.0",
+		"assets": []
+	}`
+
+	s.srv = newLocalTestServer(s.T(), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(s.T(), "/https://api.github.com/repos/test/repo/releases/latest", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(releaseJSON))
+	}))
+
+	s.client = &githubReleaseClient{
+		httpClient:         s.srv.Client(),
+		downloadHTTPClient: &http.Client{},
+		mirrorBaseURL:      s.srv.URL,
+	}
+
+	release, err := s.client.FetchLatestRelease(context.Background(), "test/repo")
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), "v1.0.0", release.TagName)
+}
+
+func (s *GitHubReleaseServiceSuite) TestRewriteURL_UsesTemplateMirror() {
+	s.client = &githubReleaseClient{
+		mirrorBaseURL: "https://mirror.example.com/{url}",
+	}
+
+	got := s.client.rewriteURL("https://github.com/test/repo/releases/download/v1/app.tar.gz")
+	require.Equal(s.T(), "https://mirror.example.com/https://github.com/test/repo/releases/download/v1/app.tar.gz", got)
+}
+
 func (s *GitHubReleaseServiceSuite) TestFetchLatestRelease_Non200() {
 	s.srv = newLocalTestServer(s.T(), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
