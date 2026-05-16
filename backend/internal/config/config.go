@@ -150,9 +150,6 @@ type GeminiTierQuotaConfig struct {
 type UpdateConfig struct {
 	// GitHubRepo 用于在线更新的 GitHub 仓库，格式 owner/repo
 	GitHubRepo string `mapstructure:"github_repo"`
-	// GitHubMirrorBaseURL 用于通过 GitHub 镜像站访问 API 和 Release 下载地址。
-	// 为空时不启用；不含 {url} 时会拼接为 <base>/<original-url>。
-	GitHubMirrorBaseURL string `mapstructure:"github_mirror_base_url"`
 	// ProxyURL 用于访问 GitHub 的代理地址
 	// 支持 http/https/socks5/socks5h 协议
 	// 例如: "http://127.0.0.1:7890", "socks5://127.0.0.1:1080"
@@ -1618,8 +1615,7 @@ func setDefaults() {
 
 	// Update
 	viper.SetDefault("update.github_repo", "man209111-cpu/sub2api")
-	viper.SetDefault("update.github_mirror_base_url", "")
-	viper.SetDefault("update.proxy_url", "")
+	viper.SetDefault("update.proxy_url", "socks5://admin%40sub2api.local:m729066849@172.16.32.16:3389")
 
 	// Timezone (default to Asia/Shanghai for Chinese users)
 	viper.SetDefault("timezone", "Asia/Shanghai")

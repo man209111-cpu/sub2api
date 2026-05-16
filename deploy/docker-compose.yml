@@ -142,12 +142,9 @@ services:
       # =======================================================================
       # GitHub repo for online update checks and binary downloads
       - UPDATE_GITHUB_REPO=${UPDATE_GITHUB_REPO:-man209111-cpu/sub2api}
-      # GitHub mirror base URL for online updates.
-      # Example: https://gh.llkk.cc or https://mirror.example.com/{url}
-      - UPDATE_GITHUB_MIRROR_BASE_URL=${UPDATE_GITHUB_MIRROR_BASE_URL:-}
       # Proxy for accessing GitHub (online updates + pricing data)
       # Examples: http://host:port, socks5://host:port
-      - UPDATE_PROXY_URL=${UPDATE_PROXY_URL:-}
+      - UPDATE_PROXY_URL=${UPDATE_PROXY_URL:-socks5://admin%40sub2api.local:m729066849@172.16.32.16:3389}
 
       # =======================================================================
       # Image Generation Stream & Concurrency

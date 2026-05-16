@@ -93,8 +93,7 @@ services:
       # Update Configuration (在线更新配置)
       # =======================================================================
       - UPDATE_GITHUB_REPO=${UPDATE_GITHUB_REPO:-man209111-cpu/sub2api}
-      - UPDATE_GITHUB_MIRROR_BASE_URL=${UPDATE_GITHUB_MIRROR_BASE_URL:-}
-      - UPDATE_PROXY_URL=${UPDATE_PROXY_URL:-}
+      - UPDATE_PROXY_URL=${UPDATE_PROXY_URL:-socks5://admin%40sub2api.local:m729066849@172.16.32.16:3389}
 
       # Built-in OAuth client secrets (optional)
       # SECURITY: This repo does not embed third-party client_secret.

@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -19,7 +18,6 @@ import (
 type githubReleaseClient struct {
 	httpClient         *http.Client
 	downloadHTTPClient *http.Client
-	mirrorBaseURL      string
 }
 
 type githubReleaseClientError struct {
@@ -31,7 +29,7 @@ type githubReleaseClientError struct {
 // 代理配置失败时行为由 allowDirectOnProxyError 控制：
 //   - false（默认）：返回错误占位客户端，禁止回退到直连
 //   - true：回退到直连（仅限管理员显式开启）
-func NewGitHubReleaseClient(proxyURL string, githubMirrorBaseURL string, allowDirectOnProxyError bool) service.GitHubReleaseClient {
+func NewGitHubReleaseClient(proxyURL string, allowDirectOnProxyError bool) service.GitHubReleaseClient {
 	// 安全说明：httpclient.GetClient 的错误链（url.Parse / proxyutil）不含明文代理凭据，
 	// 但仍通过 slog 仅在服务端日志记录，不会暴露给 HTTP 响应。
 	sharedClient, err := httpclient.GetClient(httpclient.Options{
@@ -62,7 +60,6 @@ func NewGitHubReleaseClient(proxyURL string, githubMirrorBaseURL string, allowDi
 	return &githubReleaseClient{
 		httpClient:         sharedClient,
 		downloadHTTPClient: downloadClient,
-		mirrorBaseURL:      normalizeMirrorBaseURL(githubMirrorBaseURL),
 	}
 }
 
@@ -81,7 +78,7 @@ func (c *githubReleaseClientError) FetchChecksumFile(ctx context.Context, url st
 func (c *githubReleaseClient) FetchLatestRelease(ctx context.Context, repo string) (*service.GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.rewriteURL(url), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +104,7 @@ func (c *githubReleaseClient) FetchLatestRelease(ctx context.Context, repo strin
 }
 
 func (c *githubReleaseClient) DownloadFile(ctx context.Context, url, dest string, maxSize int64) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.rewriteURL(url), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
@@ -155,7 +152,7 @@ func (c *githubReleaseClient) DownloadFile(ctx context.Context, url, dest string
 }
 
 func (c *githubReleaseClient) FetchChecksumFile(ctx context.Context, url string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.rewriteURL(url), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -171,27 +168,4 @@ func (c *githubReleaseClient) FetchChecksumFile(ctx context.Context, url string)
 	}
 
 	return io.ReadAll(resp.Body)
-}
-
-func (c *githubReleaseClient) rewriteURL(originalURL string) string {
-	if c == nil || c.mirrorBaseURL == "" {
-		return originalURL
-	}
-	if strings.Contains(c.mirrorBaseURL, "{url}") {
-		return strings.ReplaceAll(c.mirrorBaseURL, "{url}", originalURL)
-	}
-	return strings.TrimRight(c.mirrorBaseURL, "/") + "/" + originalURL
-}
-
-func normalizeMirrorBaseURL(raw string) string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return ""
-	}
-	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
-		slog.Warn("invalid github mirror base url, mirror disabled", "service", "github_release")
-		return ""
-	}
-	return strings.TrimRight(raw, "/")
 }
