@@ -80,7 +80,7 @@ func main() {
 	runMainServer()
 }
 
-func runSetupServer() {
+func runSetupServer() { //nolint:unused // kept for setup wizard server mode restoration.
 	r := gin.New()
 	r.Use(middleware.Recovery())
 	r.Use(middleware.CORS(config.CORSConfig{}))

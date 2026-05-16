@@ -84,7 +84,7 @@ func buildKiroRequestID(resp *http.Response) string {
 	return strings.TrimSpace(resp.Header.Get("x-amz-request-id"))
 }
 
-func isKiroInvalidModelIDBody(respBody []byte) bool {
+func isKiroInvalidModelIDBody(respBody []byte) bool { //nolint:unused // exercised by internal tests for error classification.
 	var payload struct {
 		Reason  string `json:"reason"`
 		Message string `json:"message"`

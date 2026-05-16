@@ -491,7 +491,7 @@ func buildKiroEndpoints(account *Account) []kiroEndpointConfig {
 	}
 }
 
-func buildKiroPayloadForAccount(ctx context.Context, account *Account, anthropicBody []byte, modelID, token, requestModel string, headers http.Header) ([]byte, error) {
+func buildKiroPayloadForAccount(ctx context.Context, account *Account, anthropicBody []byte, modelID, token, requestModel string, headers http.Header) ([]byte, error) { //nolint:unused // exercised by package tests as a narrow payload helper.
 	result, err := buildKiroPayloadForAccountWithRepo(ctx, nil, account, anthropicBody, modelID, token, requestModel, headers)
 	if err != nil {
 		return nil, err
