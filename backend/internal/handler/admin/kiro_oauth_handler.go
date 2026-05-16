@@ -129,6 +129,7 @@ func (h *KiroOAuthHandler) RefreshToken(c *gin.Context) {
 type KiroImportTokenRequest struct {
 	TokenJSON              string `json:"token_json" binding:"required"`
 	DeviceRegistrationJSON string `json:"device_registration_json"`
+	ProxyID                *int64 `json:"proxy_id"`
 }
 
 func (h *KiroOAuthHandler) ImportToken(c *gin.Context) {
@@ -140,6 +141,7 @@ func (h *KiroOAuthHandler) ImportToken(c *gin.Context) {
 	tokenInfo, err := h.kiroOAuthService.ImportToken(&service.KiroImportTokenInput{
 		TokenJSON:              req.TokenJSON,
 		DeviceRegistrationJSON: req.DeviceRegistrationJSON,
+		ProxyID:                req.ProxyID,
 	})
 	if err != nil {
 		response.BadRequest(c, "导入 Kiro Token 失败: "+err.Error())

@@ -1862,6 +1862,76 @@ func (h *AccountHandler) SetSchedulable(c *gin.Context) {
 	response.Success(c, h.buildAccountResponseWithRuntime(c.Request.Context(), account))
 }
 
+// GetKiroUpstreamModels handles getting upstream Kiro models with the account credentials/proxy.
+// GET /api/v1/admin/accounts/:id/kiro/upstream-models
+func (h *AccountHandler) GetKiroUpstreamModels(c *gin.Context) {
+	accountID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid account ID")
+		return
+	}
+
+	account, err := h.adminService.GetAccount(c.Request.Context(), accountID)
+	if err != nil {
+		response.NotFound(c, "Account not found")
+		return
+	}
+	if account.Platform != service.PlatformKiro {
+		response.BadRequest(c, "Account is not a Kiro account")
+		return
+	}
+	if h.accountTestService == nil {
+		response.InternalError(c, "Kiro account service not configured")
+		return
+	}
+
+	models, err := h.accountTestService.FetchKiroUpstreamModels(c.Request.Context(), account)
+	if err != nil {
+		if errors.Is(err, service.ErrKiroModelListUnsupported) {
+			response.BadRequest(c, err.Error())
+			return
+		}
+		response.InternalError(c, "Failed to fetch Kiro upstream model list: "+err.Error())
+		return
+	}
+	response.Success(c, models)
+}
+
+// GetOpenAIUpstreamModels handles getting upstream OpenAI models with the account credentials/proxy.
+// GET /api/v1/admin/accounts/:id/openai/upstream-models
+func (h *AccountHandler) GetOpenAIUpstreamModels(c *gin.Context) {
+	accountID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid account ID")
+		return
+	}
+
+	account, err := h.adminService.GetAccount(c.Request.Context(), accountID)
+	if err != nil {
+		response.NotFound(c, "Account not found")
+		return
+	}
+	if account.Platform != service.PlatformOpenAI {
+		response.BadRequest(c, "Account is not an OpenAI account")
+		return
+	}
+	if h.accountTestService == nil {
+		response.InternalError(c, "OpenAI account service not configured")
+		return
+	}
+
+	models, err := h.accountTestService.FetchOpenAIUpstreamModels(c.Request.Context(), account)
+	if err != nil {
+		if errors.Is(err, service.ErrOpenAIModelListUnsupported) {
+			response.BadRequest(c, err.Error())
+			return
+		}
+		response.InternalError(c, "Failed to fetch OpenAI upstream model list: "+err.Error())
+		return
+	}
+	response.Success(c, models)
+}
+
 // GetAvailableModels handles getting available models for an account
 // GET /api/v1/admin/accounts/:id/models
 func (h *AccountHandler) GetAvailableModels(c *gin.Context) {

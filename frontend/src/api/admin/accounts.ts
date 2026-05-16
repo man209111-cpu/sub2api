@@ -446,6 +446,26 @@ export async function getAvailableModels(id: number): Promise<ClaudeModel[]> {
   return data
 }
 
+/**
+ * Get Kiro models from the upstream Kiro ListAvailableModels API using the account proxy.
+ * @param id - Account ID
+ * @returns List of upstream Kiro models
+ */
+export async function getKiroUpstreamModels(id: number): Promise<ClaudeModel[]> {
+  const { data } = await apiClient.get<ClaudeModel[]>(`/admin/accounts/${id}/kiro/upstream-models`)
+  return data
+}
+
+/**
+ * Get OpenAI models from the upstream /v1/models API using the account proxy.
+ * @param id - Account ID
+ * @returns List of upstream OpenAI models
+ */
+export async function getOpenAIUpstreamModels(id: number): Promise<ClaudeModel[]> {
+  const { data } = await apiClient.get<ClaudeModel[]>(`/admin/accounts/${id}/openai/upstream-models`)
+  return data
+}
+
 export interface CRSPreviewAccount {
   crs_account_id: string
   kind: string
@@ -667,6 +687,8 @@ export const accountsAPI = {
   resetTempUnschedulable,
   setSchedulable,
   getAvailableModels,
+  getOpenAIUpstreamModels,
+  getKiroUpstreamModels,
   generateAuthUrl,
   exchangeCode,
   refreshOpenAIToken,

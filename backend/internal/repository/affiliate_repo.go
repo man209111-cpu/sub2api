@@ -408,7 +408,7 @@ LEFT JOIN users u ON u.id = ua.user_id
 LEFT JOIN user_affiliate_ledger ual
        ON ual.user_id = $1
       AND ual.source_user_id = ua.user_id
-      AND ual.action = 'accrue'
+      AND ual.action IN ('accrue', 'signup_reward')
 WHERE ua.inviter_id = $1
 GROUP BY ua.user_id, u.email, u.username, ua.created_at
 ORDER BY ua.created_at DESC

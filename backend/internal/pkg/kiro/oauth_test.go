@@ -54,3 +54,35 @@ func TestSessionStoreSetPrunesExpiredSessions(t *testing.T) {
 		t.Fatalf("fresh session should remain after pruning")
 	}
 }
+
+func TestParseImportedRefreshTokenAcceptsRefreshTokenOnlyPayload(t *testing.T) {
+	token, refreshOnly, err := ParseImportedRefreshToken(`{"refreshToken":"rt","provider":"Google"}`)
+	if err != nil {
+		t.Fatalf("ParseImportedRefreshToken() error = %v", err)
+	}
+	if !refreshOnly {
+		t.Fatalf("refreshOnly = false, want true")
+	}
+	if token.RefreshToken != "rt" {
+		t.Fatalf("refresh token = %q, want rt", token.RefreshToken)
+	}
+	if token.Provider != "Google" {
+		t.Fatalf("provider = %q, want Google", token.Provider)
+	}
+	if token.AuthMethod != "social" {
+		t.Fatalf("auth method = %q, want social", token.AuthMethod)
+	}
+}
+
+func TestParseImportedRefreshTokenKeepsFullTokenAsNonRefreshOnly(t *testing.T) {
+	token, refreshOnly, err := ParseImportedRefreshToken(`{"accessToken":"at","refreshToken":"rt"}`)
+	if err != nil {
+		t.Fatalf("ParseImportedRefreshToken() error = %v", err)
+	}
+	if refreshOnly {
+		t.Fatalf("refreshOnly = true, want false")
+	}
+	if token.Provider != "Google" {
+		t.Fatalf("provider = %q, want default Google", token.Provider)
+	}
+}

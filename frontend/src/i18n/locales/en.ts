@@ -1028,7 +1028,7 @@ export default {
       columns: {
         email: 'Email',
         username: 'Username',
-        rebate: 'Rebate',
+        rebate: 'Total Earnings',
         joinedAt: 'Joined At'
       }
     },
@@ -3234,6 +3234,11 @@ export default {
       requestModel: 'Request model',
       actualModel: 'Actual model',
       addMapping: 'Add Mapping',
+      fetchModelList: 'Fetch Models',
+      fetchUpstreamModelList: 'Fetch Upstream Models',
+      modelListApplied: 'Replaced with {count} model(s)',
+      noModelsFetched: 'No available models were returned',
+      failedToFetchModelList: 'Failed to fetch model list',
       mappingExists: 'Mapping for {model} already exists',
       wildcardOnlyAtEnd: 'Wildcard * can only be at the end',
       targetNoWildcard: 'Target model cannot contain wildcard *',
@@ -3643,7 +3648,7 @@ export default {
           regionLabel: 'Region',
           regionPlaceholder: 'us-east-1',
           tokenJsonLabel: 'Kiro Token JSON',
-          tokenJsonHint: 'Sign in through Kiro IDE first, then paste the contents of `~/.aws/sso/cache/kiro-auth-token.json` here.',
+          tokenJsonHint: 'Supports full Kiro token JSON, or a refresh-token-only payload with refreshToken + provider. The server will refresh it into usable credentials.',
           deviceRegistrationLabel: 'Device Registration JSON',
           deviceRegistrationHint: 'Optional. Only needed when the token file does not include full client details and only has `clientIdHash`.',
           importAndUpdate: 'Import and Update'

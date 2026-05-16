@@ -3217,7 +3217,7 @@
       <div v-if="isKiroImportMode" class="space-y-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-900/20">
         <div>
           <label class="input-label">{{ t('admin.accounts.oauth.kiro.tokenJsonLabel') }}</label>
-          <textarea v-model="kiroTokenJson" rows="8" class="input font-mono text-xs" placeholder='{"accessToken":"...","refreshToken":"..."}'></textarea>
+          <textarea v-model="kiroTokenJson" rows="8" class="input font-mono text-xs" placeholder='{"refreshToken":"...","provider":"Google"}'></textarea>
           <p class="input-hint">{{ t('admin.accounts.oauth.kiro.tokenJsonHint') }}</p>
         </div>
         <div>
@@ -5811,7 +5811,8 @@ const handleKiroImport = async () => {
 
   const tokenInfo = await kiroOAuth.importToken(
     kiroTokenJson.value,
-    kiroDeviceRegistrationJson.value || undefined
+    kiroDeviceRegistrationJson.value || undefined,
+    form.proxy_id
   )
   if (!tokenInfo) return
 

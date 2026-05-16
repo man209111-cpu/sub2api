@@ -96,6 +96,7 @@ type KiroRefreshTokenInput struct {
 type KiroImportTokenInput struct {
 	TokenJSON              string
 	DeviceRegistrationJSON string
+	ProxyID                *int64
 }
 
 func (s *KiroOAuthService) GenerateAuthURL(ctx context.Context, input *KiroGenerateAuthURLInput) (*KiroAuthURLResult, error) {
@@ -284,6 +285,28 @@ func (s *KiroOAuthService) RefreshAccountToken(ctx context.Context, account *Acc
 }
 
 func (s *KiroOAuthService) ImportToken(input *KiroImportTokenInput) (*KiroTokenInfo, error) {
+	tokenFromRefresh, refreshOnly, err := kiropkg.ParseImportedRefreshToken(input.TokenJSON)
+	if err != nil {
+		return nil, err
+	}
+	if refreshOnly {
+		token, err := s.RefreshToken(context.Background(), &KiroRefreshTokenInput{
+			RefreshToken: tokenFromRefresh.RefreshToken,
+			AuthMethod:   tokenFromRefresh.AuthMethod,
+			Provider:     tokenFromRefresh.Provider,
+			ClientID:     tokenFromRefresh.ClientID,
+			ClientSecret: tokenFromRefresh.ClientSecret,
+			StartURL:     tokenFromRefresh.StartURL,
+			Region:       tokenFromRefresh.Region,
+			ProfileArn:   tokenFromRefresh.ProfileArn,
+			ProxyID:      input.ProxyID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return token, nil
+	}
+
 	token, err := kiropkg.ParseImportedToken(input.TokenJSON, input.DeviceRegistrationJSON)
 	if err != nil {
 		return nil, err

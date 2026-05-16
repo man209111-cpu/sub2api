@@ -775,7 +775,8 @@ const handleKiroImport = async () => {
 
   const tokenInfo = await kiroOAuth.importToken(
     kiroTokenJson.value,
-    kiroDeviceRegistrationJson.value || undefined
+    kiroDeviceRegistrationJson.value || undefined,
+    props.account.proxy_id
   )
   if (!tokenInfo) return
 

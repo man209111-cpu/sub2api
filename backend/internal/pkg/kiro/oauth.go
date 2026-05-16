@@ -424,6 +424,24 @@ func ParseImportedToken(tokenJSON string, deviceRegistrationJSON string) (*Token
 	return &token, nil
 }
 
+func ParseImportedRefreshToken(tokenJSON string) (*TokenData, bool, error) {
+	var token TokenData
+	if err := json.Unmarshal([]byte(tokenJSON), &token); err != nil {
+		return nil, false, fmt.Errorf("failed to parse kiro token: %w", err)
+	}
+	token.AuthMethod = strings.ToLower(strings.TrimSpace(token.AuthMethod))
+	if token.AuthMethod == "" {
+		token.AuthMethod = "social"
+	}
+	if token.Provider == "" && token.AuthMethod == "social" {
+		token.Provider = string(SocialProviderGoogle)
+	}
+	if strings.TrimSpace(token.RefreshToken) == "" || strings.TrimSpace(token.AccessToken) != "" {
+		return &token, false, nil
+	}
+	return &token, true, nil
+}
+
 func getOIDCEndpoint(region string) string {
 	if strings.TrimSpace(oidcEndpointOverride) != "" {
 		return strings.TrimRight(strings.TrimSpace(oidcEndpointOverride), "/")

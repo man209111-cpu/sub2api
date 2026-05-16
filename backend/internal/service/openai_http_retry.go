@@ -121,8 +121,10 @@ func isRetryableOpenAIHTTPRequestError(err error) bool {
 		"connection refused",
 		"unexpected eof",
 		"server closed idle connection",
+		"use of closed network connection",
 		"broken pipe",
 		"connection aborted",
+		"tls: bad record mac",
 		"tls: use of closed connection",
 		"http2: client connection lost",
 	}

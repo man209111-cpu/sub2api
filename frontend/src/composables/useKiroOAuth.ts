@@ -141,14 +141,16 @@ export function useKiroOAuth() {
 
   const importToken = async (
     tokenJSON: string,
-    deviceRegistrationJSON?: string
+    deviceRegistrationJSON?: string,
+    proxyId?: number | null
   ): Promise<KiroTokenInfo | null> => {
     loading.value = true
     error.value = ''
     try {
       return await adminAPI.kiro.importToken({
         token_json: tokenJSON,
-        device_registration_json: deviceRegistrationJSON
+        device_registration_json: deviceRegistrationJSON,
+        proxy_id: proxyId || undefined
       })
     } catch (err: any) {
       error.value = err.response?.data?.detail || t('admin.accounts.oauth.authFailed')

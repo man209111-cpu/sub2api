@@ -1032,7 +1032,7 @@ export default {
       columns: {
         email: '邮箱',
         username: '用户名',
-        rebate: '返利明细',
+        rebate: '累计收益',
         joinedAt: '注册时间'
       }
     },
@@ -3391,6 +3391,11 @@ export default {
       requestModel: '请求模型',
       actualModel: '实际模型',
       addMapping: '添加映射',
+      fetchModelList: '获取模型列表',
+      fetchUpstreamModelList: '从上游获取模型',
+      modelListApplied: '已覆盖为 {count} 个模型',
+      noModelsFetched: '未获取到可用模型',
+      failedToFetchModelList: '获取模型列表失败',
       mappingExists: '模型 {model} 的映射已存在',
       wildcardOnlyAtEnd: '通配符 * 只能放在末尾',
       targetNoWildcard: '目标模型不能包含通配符 *',
@@ -3787,7 +3792,7 @@ export default {
           regionLabel: 'Region',
           regionPlaceholder: 'us-east-1',
           tokenJsonLabel: 'Kiro Token JSON',
-          tokenJsonHint: '先在 Kiro IDE 完成登录，再粘贴 `~/.aws/sso/cache/kiro-auth-token.json` 的内容。',
+          tokenJsonHint: '支持完整 Kiro token JSON，也支持仅粘贴 refreshToken + provider 格式，系统会自动刷新为可用凭据。',
           deviceRegistrationLabel: 'Device Registration JSON',
           deviceRegistrationHint: '可选。只有 token 文件里缺少完整客户端信息、只剩 `clientIdHash` 时才需要补充。',
           importAndUpdate: '导入并更新'

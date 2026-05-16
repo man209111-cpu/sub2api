@@ -74,7 +74,18 @@
         </div>
 
         <div v-if="account.platform === 'kiro'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
-          <label class="input-label">{{ t('admin.accounts.modelRestriction') }}</label>
+          <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <label class="input-label mb-0">{{ t('admin.accounts.modelRestriction') }}</label>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              :disabled="kiroModelListLoading"
+              @click="handleFetchKiroModelMappings"
+            >
+              <Icon name="refresh" size="sm" :class="kiroModelListLoading ? 'animate-spin' : ''" />
+              {{ kiroModelListLoading ? t('common.loading') : t('admin.accounts.fetchModelList') }}
+            </button>
+          </div>
 
           <div class="mb-3 rounded-lg bg-purple-50 p-3 dark:bg-purple-900/20">
             <p class="text-xs text-purple-700 dark:text-purple-400">
@@ -160,7 +171,19 @@
 
         <!-- Model Restriction Section (不适用于 Antigravity / Kiro) -->
         <div v-else-if="account.platform !== 'antigravity'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
-          <label class="input-label">{{ t('admin.accounts.modelRestriction') }}</label>
+          <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <label class="input-label mb-0">{{ t('admin.accounts.modelRestriction') }}</label>
+            <button
+              v-if="account.platform === 'openai'"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              :disabled="openAIModelListLoading || isOpenAIModelRestrictionDisabled"
+              @click="handleFetchOpenAIModels"
+            >
+              <Icon name="refresh" size="sm" :class="openAIModelListLoading ? 'animate-spin' : ''" />
+              {{ openAIModelListLoading ? t('common.loading') : t('admin.accounts.fetchUpstreamModelList') }}
+            </button>
+          </div>
 
           <div
             v-if="isOpenAIModelRestrictionDisabled"
@@ -501,7 +524,29 @@
         v-if="(account.platform === 'openai' || account.platform === 'kiro') && account.type === 'oauth'"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
-        <label class="input-label">{{ t('admin.accounts.modelRestriction') }}</label>
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <label class="input-label mb-0">{{ t('admin.accounts.modelRestriction') }}</label>
+          <button
+            v-if="account.platform === 'openai'"
+            type="button"
+            class="btn btn-secondary btn-sm"
+            :disabled="openAIModelListLoading || isOpenAIModelRestrictionDisabled"
+            @click="handleFetchOpenAIModels"
+          >
+            <Icon name="refresh" size="sm" :class="openAIModelListLoading ? 'animate-spin' : ''" />
+            {{ openAIModelListLoading ? t('common.loading') : t('admin.accounts.fetchUpstreamModelList') }}
+          </button>
+          <button
+            v-if="account.platform === 'kiro'"
+            type="button"
+            class="btn btn-secondary btn-sm"
+            :disabled="kiroModelListLoading"
+            @click="handleFetchKiroModelMappings"
+          >
+            <Icon name="refresh" size="sm" :class="kiroModelListLoading ? 'animate-spin' : ''" />
+            {{ kiroModelListLoading ? t('common.loading') : t('admin.accounts.fetchModelList') }}
+          </button>
+        </div>
 
         <div
           v-if="isOpenAIModelRestrictionDisabled"
@@ -2442,6 +2487,8 @@ const modelMappings = ref<ModelMapping[]>([])
 const openAICompactModelMappings = ref<ModelMapping[]>([])
 const modelRestrictionMode = ref<'whitelist' | 'mapping'>('whitelist')
 const allowedModels = ref<string[]>([])
+const openAIModelListLoading = ref(false)
+const kiroModelListLoading = ref(false)
 const DEFAULT_POOL_MODE_RETRY_COUNT = 3
 const MAX_POOL_MODE_RETRY_COUNT = 10
 const poolModeEnabled = ref(false)
@@ -2476,6 +2523,75 @@ const loadDefaultKiroModelMappings = () => {
     modelMappings.value = mappings.map(({ from, to }) => ({ from, to }))
     allowedModels.value = []
   })
+}
+
+const extractModelID = (model: unknown): string => {
+  if (typeof model === 'string') return model.trim()
+  if (!model || typeof model !== 'object') return ''
+
+  const record = model as Record<string, unknown>
+  const rawID = record.modelId ?? record.model_id ?? record.id ?? record.name ?? record.model
+  return typeof rawID === 'string' ? rawID.trim() : ''
+}
+
+const handleFetchKiroModelMappings = async () => {
+  if (!props.account || props.account.platform !== 'kiro') return
+
+  kiroModelListLoading.value = true
+  try {
+    const models = await adminAPI.accounts.getKiroUpstreamModels(props.account.id)
+    const modelIDs = Array.from(
+      new Set(
+        models
+          .map(extractModelID)
+          .filter((id) => id.length > 0)
+      )
+    )
+
+    if (modelIDs.length === 0) {
+      appStore.showError(t('admin.accounts.noModelsFetched'))
+      return
+    }
+
+    modelRestrictionMode.value = 'mapping'
+    modelMappings.value = modelIDs.map((model) => ({ from: model, to: model }))
+    allowedModels.value = []
+    appStore.showSuccess(t('admin.accounts.modelListApplied', { count: modelIDs.length }))
+  } catch (error: any) {
+    appStore.showError(error.response?.data?.message || error.response?.data?.detail || t('admin.accounts.failedToFetchModelList'))
+  } finally {
+    kiroModelListLoading.value = false
+  }
+}
+
+const handleFetchOpenAIModels = async () => {
+  if (!props.account || props.account.platform !== 'openai') return
+
+  openAIModelListLoading.value = true
+  try {
+    const models = await adminAPI.accounts.getOpenAIUpstreamModels(props.account.id)
+    const modelIDs = Array.from(
+      new Set(
+        models
+          .map(extractModelID)
+          .filter((id) => id.length > 0)
+      )
+    )
+
+    if (modelIDs.length === 0) {
+      appStore.showError(t('admin.accounts.noModelsFetched'))
+      return
+    }
+
+    modelRestrictionMode.value = 'whitelist'
+    allowedModels.value = modelIDs
+    modelMappings.value = []
+    appStore.showSuccess(t('admin.accounts.modelListApplied', { count: modelIDs.length }))
+  } catch (error: any) {
+    appStore.showError(error.response?.data?.message || error.response?.data?.detail || t('admin.accounts.failedToFetchModelList'))
+  } finally {
+    openAIModelListLoading.value = false
+  }
 }
 
 const showMixedChannelWarning = ref(false)

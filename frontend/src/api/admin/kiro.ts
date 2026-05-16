@@ -75,6 +75,7 @@ export async function refreshToken(payload: {
 export async function importToken(payload: {
   token_json: string
   device_registration_json?: string
+  proxy_id?: number
 }): Promise<KiroTokenInfo> {
   const { data } = await apiClient.post<KiroTokenInfo>('/admin/kiro/oauth/import-token', payload)
   return data
