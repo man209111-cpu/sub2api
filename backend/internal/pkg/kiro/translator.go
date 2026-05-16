@@ -1827,6 +1827,9 @@ func parseEventStream(body io.Reader) (string, []KiroToolUse, Usage, string, err
 	cleanText, embeddedToolUses, _ := drainEmbeddedToolText(content.String())
 	toolUses = append(toolUses, embeddedToolUses...)
 	toolUses = deduplicateToolUses(toolUses)
+	if usage.OutputTokens == 0 {
+		usage.OutputTokens = estimateKiroOutputTokens(cleanText, toolUses)
+	}
 
 	if usage.TotalTokens == 0 {
 		usage.TotalTokens = usage.InputTokens + usage.OutputTokens
@@ -2629,16 +2632,16 @@ func updateUsageFromEvent(usage *Usage, eventType string, event map[string]inter
 		meta = event
 	}
 	if tokenUsage, ok := meta["tokenUsage"].(map[string]interface{}); ok {
-		if value, ok := toInt(tokenUsage["uncachedInputTokens"]); ok {
+		if value, ok := firstInt(tokenUsage, "uncachedInputTokens", "inputTokens", "inputTokenCount", "promptTokens", "prompt_tokens"); ok {
 			usage.InputTokens = value
 		}
-		if value, ok := toInt(tokenUsage["outputTokens"]); ok {
+		if value, ok := firstInt(tokenUsage, "outputTokens", "outputTokenCount", "completionTokens", "completion_tokens", "generatedTokens", "generatedTokenCount"); ok {
 			usage.OutputTokens = value
 		}
-		if value, ok := toInt(tokenUsage["totalTokens"]); ok {
+		if value, ok := firstInt(tokenUsage, "totalTokens", "totalTokenCount"); ok {
 			usage.TotalTokens = value
 		}
-		if value, ok := toInt(tokenUsage["cacheReadInputTokens"]); ok {
+		if value, ok := firstInt(tokenUsage, "cacheReadInputTokens", "cachedInputTokens", "cacheReadTokens", "cachedTokens", "cached_tokens"); ok {
 			usage.CacheReadInputTokens = value
 			if usage.InputTokens == 0 {
 				usage.InputTokens = value
@@ -2647,24 +2650,70 @@ func updateUsageFromEvent(usage *Usage, eventType string, event map[string]inter
 			}
 		}
 	}
-	if value, ok := toInt(event["inputTokens"]); ok && value > 0 {
+	if value, ok := firstInt(event, "inputTokens", "inputTokenCount", "promptTokens", "prompt_tokens"); ok && value > 0 {
 		usage.InputTokens = value
 	}
-	if value, ok := toInt(event["outputTokens"]); ok && value > 0 {
+	if value, ok := firstInt(event, "outputTokens", "outputTokenCount", "completionTokens", "completion_tokens", "generatedTokens", "generatedTokenCount"); ok && value > 0 {
 		usage.OutputTokens = value
 	}
-	if value, ok := toInt(event["totalTokens"]); ok && value > 0 {
+	if value, ok := firstInt(event, "totalTokens", "totalTokenCount"); ok && value > 0 {
 		usage.TotalTokens = value
 	}
-	if value, ok := toInt(meta["inputTokens"]); ok && value > 0 {
+	if value, ok := firstInt(meta, "inputTokens", "inputTokenCount", "promptTokens", "prompt_tokens"); ok && value > 0 {
 		usage.InputTokens = value
 	}
-	if value, ok := toInt(meta["outputTokens"]); ok && value > 0 {
+	if value, ok := firstInt(meta, "outputTokens", "outputTokenCount", "completionTokens", "completion_tokens", "generatedTokens", "generatedTokenCount"); ok && value > 0 {
 		usage.OutputTokens = value
 	}
-	if value, ok := toInt(meta["totalTokens"]); ok && value > 0 {
+	if value, ok := firstInt(meta, "totalTokens", "totalTokenCount"); ok && value > 0 {
 		usage.TotalTokens = value
 	}
+}
+
+func firstInt(m map[string]interface{}, keys ...string) (int, bool) {
+	for _, key := range keys {
+		if value, ok := toInt(m[key]); ok {
+			return value, true
+		}
+	}
+	return 0, false
+}
+
+func estimateKiroOutputTokens(content string, toolUses []KiroToolUse) int {
+	total := countKiroTextTokens(content)
+	for _, tool := range toolUses {
+		if tool.IsTruncated {
+			continue
+		}
+		if tool.Name != "" {
+			total += countKiroTextTokens(tool.Name)
+		}
+		if tool.Input != nil {
+			if b, err := json.Marshal(tool.Input); err == nil {
+				total += countKiroTextTokens(string(b))
+			}
+		}
+	}
+	return total
+}
+
+func countKiroTextTokens(text string) int {
+	if strings.TrimSpace(text) == "" {
+		return 0
+	}
+	units := 0
+	for _, r := range text {
+		if r >= '\u4e00' && r <= '\u9fff' {
+			units += 2
+		} else {
+			units++
+		}
+	}
+	tokens := (units + 3) / 4
+	if tokens < 1 {
+		return 1
+	}
+	return tokens
 }
 
 func readToolUses(primary, fallback map[string]interface{}) []KiroToolUse {

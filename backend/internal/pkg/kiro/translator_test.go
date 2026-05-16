@@ -279,6 +279,57 @@ func TestParseNonStreamingEventStream(t *testing.T) {
 	require.True(t, strings.Contains(firstText, "hello from kiro"))
 }
 
+func TestParseNonStreamingEventStreamUsageAliases(t *testing.T) {
+	stream := bytes.NewBuffer(nil)
+	_, _ = stream.Write(buildEventStreamFrame(t, "assistantResponseEvent", map[string]any{
+		"assistantResponseEvent": map[string]any{
+			"content": "hello",
+		},
+	}))
+	_, _ = stream.Write(buildEventStreamFrame(t, "metadataEvent", map[string]any{
+		"metadataEvent": map[string]any{
+			"tokenUsage": map[string]any{
+				"inputTokenCount":  12,
+				"completionTokens": 7,
+				"cachedTokens":     3,
+				"totalTokenCount":  22,
+			},
+		},
+	}))
+
+	result, err := ParseNonStreamingEventStream(stream, "claude-sonnet-4-5")
+	require.NoError(t, err)
+	require.Equal(t, 15, result.Usage.InputTokens)
+	require.Equal(t, 7, result.Usage.OutputTokens)
+	require.Equal(t, 3, result.Usage.CacheReadInputTokens)
+	require.Equal(t, 22, result.Usage.TotalTokens)
+	require.Equal(t, float64(3), gjson.GetBytes(result.ResponseBody, "usage.cache_read_input_tokens").Float())
+}
+
+func TestParseNonStreamingEventStreamEstimatesMissingOutputTokens(t *testing.T) {
+	stream := bytes.NewBuffer(nil)
+	_, _ = stream.Write(buildEventStreamFrame(t, "assistantResponseEvent", map[string]any{
+		"assistantResponseEvent": map[string]any{
+			"content": "hello from kiro",
+		},
+	}))
+	_, _ = stream.Write(buildEventStreamFrame(t, "messageMetadataEvent", map[string]any{
+		"messageMetadataEvent": map[string]any{
+			"tokenUsage": map[string]any{
+				"uncachedInputTokens": 12,
+				"cacheReadInputTokens": 3,
+			},
+		},
+	}))
+
+	result, err := ParseNonStreamingEventStream(stream, "claude-sonnet-4-5")
+	require.NoError(t, err)
+	require.Equal(t, 15, result.Usage.InputTokens)
+	require.Equal(t, 4, result.Usage.OutputTokens)
+	require.Equal(t, 19, result.Usage.TotalTokens)
+	require.Equal(t, float64(4), gjson.GetBytes(result.ResponseBody, "usage.output_tokens").Float())
+}
+
 func TestExtractThinkingBlocksIgnoresLiteralTags(t *testing.T) {
 	content := strings.Join([]string{
 		"Use `<thinking>` literally.",
