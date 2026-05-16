@@ -51,10 +51,11 @@ var (
 )
 
 type Usage struct {
-	InputTokens          int
-	OutputTokens         int
-	TotalTokens          int
-	CacheReadInputTokens int
+	InputTokens              int
+	OutputTokens             int
+	TotalTokens              int
+	CacheReadInputTokens     int
+	CacheCreationInputTokens int
 }
 
 type StreamResult struct {
@@ -368,6 +369,8 @@ func StreamEventStreamAsAnthropicWithContext(ctx context.Context, body io.Reader
 	inThinkingBlock := false
 	stripThinkingLeadingNewline := false
 	sawNonThinkingBlock := false
+	estimatedOutputTokens := 0
+	contextInputTokens := 0
 
 	writeEvent := func(event string, data any) error {
 		payload, err := json.Marshal(data)
@@ -488,6 +491,7 @@ func StreamEventStreamAsAnthropicWithContext(ctx context.Context, body io.Reader
 		if toolUseID == "" || !streamingToolStarted[toolUseID] || streamingToolStopped[toolUseID] {
 			return nil
 		}
+		estimatedOutputTokens += countKiroTextTokens(fragment)
 		return writeEvent("content_block_delta", map[string]any{
 			"type":  "content_block_delta",
 			"index": streamingToolBlockIndices[toolUseID],
@@ -571,6 +575,7 @@ func StreamEventStreamAsAnthropicWithContext(ctx context.Context, body io.Reader
 				return err
 			}
 		}
+		estimatedOutputTokens += countKiroTextTokens(text)
 		return writeEvent("content_block_delta", map[string]any{
 			"type":  "content_block_delta",
 			"index": contentBlockIndex,
@@ -611,6 +616,7 @@ func StreamEventStreamAsAnthropicWithContext(ctx context.Context, body io.Reader
 			return err
 		}
 		inputJSON, _ := json.Marshal(tool.Input)
+		estimatedOutputTokens += estimateKiroOutputTokens("", []KiroToolUse{tool})
 		if err := writeEvent("content_block_delta", map[string]any{
 			"type":  "content_block_delta",
 			"index": contentBlockIndex,
@@ -678,6 +684,7 @@ func StreamEventStreamAsAnthropicWithContext(ctx context.Context, body io.Reader
 				return err
 			}
 		}
+		estimatedOutputTokens += countKiroTextTokens(text)
 		return writeEvent("content_block_delta", map[string]any{
 			"type":  "content_block_delta",
 			"index": thinkingBlockIndex,
@@ -883,6 +890,14 @@ func StreamEventStreamAsAnthropicWithContext(ctx context.Context, body io.Reader
 			if err := processStreamingToolUseEvent(event); err != nil {
 				return nil, err
 			}
+		case "contextUsageEvent":
+			contextUsage := nestedEvent(event, "contextUsageEvent")
+			if contextUsagePercent, ok := firstFloat(contextUsage, "contextUsagePercentage", "context_usage_percentage"); ok {
+				contextInputTokens = int(contextUsagePercent * float64(kiroContextWindowSize(model)) / 100)
+				if contextUsagePercent >= 100 && stopReason == "" {
+					stopReason = "model_context_window_exceeded"
+				}
+			}
 		case "messageMetadataEvent", "metadataEvent", "supplementaryWebLinksEvent", "usageEvent", "messageStopEvent", "message_stop":
 			updateUsageFromEvent(&usage, msg.EventType, event)
 		default:
@@ -912,6 +927,12 @@ func StreamEventStreamAsAnthropicWithContext(ctx context.Context, body io.Reader
 	if err := closeThinking(); err != nil {
 		return nil, err
 	}
+	if usage.OutputTokens == 0 && estimatedOutputTokens > 0 {
+		usage.OutputTokens = estimatedOutputTokens
+	}
+	if contextInputTokens > 0 {
+		usage.InputTokens = contextInputTokens
+	}
 	if usage.TotalTokens == 0 {
 		usage.TotalTokens = usage.InputTokens + usage.OutputTokens
 	}
@@ -935,7 +956,7 @@ func StreamEventStreamAsAnthropicWithContext(ctx context.Context, body io.Reader
 			"input_tokens":                usage.InputTokens,
 			"output_tokens":               usage.OutputTokens,
 			"cache_read_input_tokens":     usage.CacheReadInputTokens,
-			"cache_creation_input_tokens": 0,
+			"cache_creation_input_tokens": usage.CacheCreationInputTokens,
 		},
 	}); err != nil {
 		return nil, err
@@ -1883,9 +1904,10 @@ func buildClaudeResponse(content string, toolUses []KiroToolUse, model string, u
 		"content":     blocks,
 		"stop_reason": stopReason,
 		"usage": map[string]interface{}{
-			"input_tokens":            usage.InputTokens,
-			"output_tokens":           usage.OutputTokens,
-			"cache_read_input_tokens": usage.CacheReadInputTokens,
+			"input_tokens":                usage.InputTokens,
+			"output_tokens":               usage.OutputTokens,
+			"cache_read_input_tokens":     usage.CacheReadInputTokens,
+			"cache_creation_input_tokens": usage.CacheCreationInputTokens,
 		},
 	}
 	result, _ := json.Marshal(response)
@@ -2649,6 +2671,9 @@ func updateUsageFromEvent(usage *Usage, eventType string, event map[string]inter
 				usage.InputTokens += value
 			}
 		}
+		if value, ok := firstInt(tokenUsage, "cacheCreationInputTokens", "cacheWriteInputTokens", "cacheCreateInputTokens", "cacheCreationTokens", "cacheWriteTokens", "uploadedInputTokens", "uploadInputTokens", "uploadedTokens", "uploadTokens"); ok {
+			usage.CacheCreationInputTokens = value
+		}
 	}
 	if value, ok := firstInt(event, "inputTokens", "inputTokenCount", "promptTokens", "prompt_tokens"); ok && value > 0 {
 		usage.InputTokens = value
@@ -2668,6 +2693,18 @@ func updateUsageFromEvent(usage *Usage, eventType string, event map[string]inter
 	if value, ok := firstInt(meta, "totalTokens", "totalTokenCount"); ok && value > 0 {
 		usage.TotalTokens = value
 	}
+	if value, ok := firstInt(event, "cacheReadInputTokens", "cachedInputTokens", "cacheReadTokens", "cachedTokens", "cached_tokens"); ok && value > 0 {
+		usage.CacheReadInputTokens = value
+	}
+	if value, ok := firstInt(meta, "cacheReadInputTokens", "cachedInputTokens", "cacheReadTokens", "cachedTokens", "cached_tokens"); ok && value > 0 {
+		usage.CacheReadInputTokens = value
+	}
+	if value, ok := firstInt(event, "cacheCreationInputTokens", "cacheWriteInputTokens", "cacheCreateInputTokens", "cacheCreationTokens", "cacheWriteTokens", "uploadedInputTokens", "uploadInputTokens", "uploadedTokens", "uploadTokens"); ok && value > 0 {
+		usage.CacheCreationInputTokens = value
+	}
+	if value, ok := firstInt(meta, "cacheCreationInputTokens", "cacheWriteInputTokens", "cacheCreateInputTokens", "cacheCreationTokens", "cacheWriteTokens", "uploadedInputTokens", "uploadInputTokens", "uploadedTokens", "uploadTokens"); ok && value > 0 {
+		usage.CacheCreationInputTokens = value
+	}
 }
 
 func firstInt(m map[string]interface{}, keys ...string) (int, bool) {
@@ -2677,6 +2714,39 @@ func firstInt(m map[string]interface{}, keys ...string) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+func firstFloat(m map[string]interface{}, keys ...string) (float64, bool) {
+	for _, key := range keys {
+		switch v := m[key].(type) {
+		case float64:
+			return v, true
+		case float32:
+			return float64(v), true
+		case int:
+			return float64(v), true
+		case int64:
+			return float64(v), true
+		case json.Number:
+			if parsed, err := v.Float64(); err == nil {
+				return parsed, true
+			}
+		case string:
+			if parsed, err := strconv.ParseFloat(strings.TrimSpace(v), 64); err == nil {
+				return parsed, true
+			}
+		}
+	}
+	return 0, false
+}
+
+func kiroContextWindowSize(model string) int {
+	switch MapModel(model) {
+	case "claude-opus-4.6", "claude-sonnet-4.6":
+		return 1_000_000
+	default:
+		return 200_000
+	}
 }
 
 func estimateKiroOutputTokens(content string, toolUses []KiroToolUse) int {

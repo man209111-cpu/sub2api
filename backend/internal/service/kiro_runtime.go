@@ -587,9 +587,10 @@ func kiroUsageToClaude(usage kiropkg.Usage, fallbackInput int) ClaudeUsage {
 		inputTokens = fallbackInput
 	}
 	return ClaudeUsage{
-		InputTokens:          inputTokens,
-		OutputTokens:         usage.OutputTokens,
-		CacheReadInputTokens: usage.CacheReadInputTokens,
+		InputTokens:              inputTokens,
+		OutputTokens:             usage.OutputTokens,
+		CacheReadInputTokens:     usage.CacheReadInputTokens,
+		CacheCreationInputTokens: usage.CacheCreationInputTokens,
 	}
 }
 

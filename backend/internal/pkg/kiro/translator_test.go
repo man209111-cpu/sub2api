@@ -292,6 +292,7 @@ func TestParseNonStreamingEventStreamUsageAliases(t *testing.T) {
 				"inputTokenCount":  12,
 				"completionTokens": 7,
 				"cachedTokens":     3,
+				"uploadedTokens":   5,
 				"totalTokenCount":  22,
 			},
 		},
@@ -302,8 +303,10 @@ func TestParseNonStreamingEventStreamUsageAliases(t *testing.T) {
 	require.Equal(t, 15, result.Usage.InputTokens)
 	require.Equal(t, 7, result.Usage.OutputTokens)
 	require.Equal(t, 3, result.Usage.CacheReadInputTokens)
+	require.Equal(t, 5, result.Usage.CacheCreationInputTokens)
 	require.Equal(t, 22, result.Usage.TotalTokens)
 	require.Equal(t, float64(3), gjson.GetBytes(result.ResponseBody, "usage.cache_read_input_tokens").Float())
+	require.Equal(t, float64(5), gjson.GetBytes(result.ResponseBody, "usage.cache_creation_input_tokens").Float())
 }
 
 func TestParseNonStreamingEventStreamEstimatesMissingOutputTokens(t *testing.T) {
@@ -316,7 +319,7 @@ func TestParseNonStreamingEventStreamEstimatesMissingOutputTokens(t *testing.T) 
 	_, _ = stream.Write(buildEventStreamFrame(t, "messageMetadataEvent", map[string]any{
 		"messageMetadataEvent": map[string]any{
 			"tokenUsage": map[string]any{
-				"uncachedInputTokens": 12,
+				"uncachedInputTokens":  12,
 				"cacheReadInputTokens": 3,
 			},
 		},
@@ -579,6 +582,89 @@ func TestStreamEventStreamAsAnthropicSkipsLeadingWhitespaceOnlyChunk(t *testing.
 	require.Contains(t, output, `"text":"Hello from Kiro"`)
 	require.NotContains(t, output, `"delta":{"text":"\n","type":"text_delta"}`)
 	require.NotContains(t, output, `"delta":{"text":"","type":"text_delta"}`)
+}
+
+func TestStreamEventStreamAsAnthropicUsageAliases(t *testing.T) {
+	stream := bytes.NewBuffer(nil)
+	_, _ = stream.Write(buildEventStreamFrame(t, "assistantResponseEvent", map[string]any{
+		"assistantResponseEvent": map[string]any{
+			"content": "hello",
+		},
+	}))
+	_, _ = stream.Write(buildEventStreamFrame(t, "metadataEvent", map[string]any{
+		"metadataEvent": map[string]any{
+			"tokenUsage": map[string]any{
+				"inputTokenCount":  12,
+				"completionTokens": 7,
+				"cachedTokens":     3,
+				"uploadedTokens":   5,
+				"totalTokenCount":  27,
+			},
+		},
+	}))
+
+	var out bytes.Buffer
+	result, err := StreamEventStreamAsAnthropic(context.Background(), stream, &out, "claude-sonnet-4-5", 9)
+	require.NoError(t, err)
+	require.Equal(t, 15, result.Usage.InputTokens)
+	require.Equal(t, 7, result.Usage.OutputTokens)
+	require.Equal(t, 3, result.Usage.CacheReadInputTokens)
+	require.Equal(t, 5, result.Usage.CacheCreationInputTokens)
+	require.Equal(t, 27, result.Usage.TotalTokens)
+
+	finalUsage := lastStreamUsage(t, out.String())
+	require.Equal(t, int64(15), finalUsage.Get("input_tokens").Int())
+	require.Equal(t, int64(7), finalUsage.Get("output_tokens").Int())
+	require.Equal(t, int64(3), finalUsage.Get("cache_read_input_tokens").Int())
+	require.Equal(t, int64(5), finalUsage.Get("cache_creation_input_tokens").Int())
+}
+
+func TestStreamEventStreamAsAnthropicEstimatesMissingOutputTokens(t *testing.T) {
+	stream := bytes.NewBuffer(nil)
+	_, _ = stream.Write(buildEventStreamFrame(t, "assistantResponseEvent", map[string]any{
+		"assistantResponseEvent": map[string]any{
+			"content": "Hello from Kiro",
+		},
+	}))
+	_, _ = stream.Write(buildEventStreamFrame(t, "messageMetadataEvent", map[string]any{
+		"messageMetadataEvent": map[string]any{
+			"tokenUsage": map[string]any{
+				"uncachedInputTokens": 9,
+			},
+		},
+	}))
+
+	var out bytes.Buffer
+	result, err := StreamEventStreamAsAnthropic(context.Background(), stream, &out, "claude-sonnet-4-5", 9)
+	require.NoError(t, err)
+	require.Equal(t, 9, result.Usage.InputTokens)
+	require.Equal(t, 4, result.Usage.OutputTokens)
+	require.Equal(t, 13, result.Usage.TotalTokens)
+
+	finalUsage := lastStreamUsage(t, out.String())
+	require.Equal(t, int64(4), finalUsage.Get("output_tokens").Int())
+}
+
+func TestStreamEventStreamAsAnthropicUsesContextUsageInputTokens(t *testing.T) {
+	stream := bytes.NewBuffer(nil)
+	_, _ = stream.Write(buildEventStreamFrame(t, "contextUsageEvent", map[string]any{
+		"contextUsageEvent": map[string]any{
+			"contextUsagePercentage": 2.5,
+		},
+	}))
+	_, _ = stream.Write(buildEventStreamFrame(t, "assistantResponseEvent", map[string]any{
+		"assistantResponseEvent": map[string]any{
+			"content": "ok",
+		},
+	}))
+
+	var out bytes.Buffer
+	result, err := StreamEventStreamAsAnthropic(context.Background(), stream, &out, "claude-opus-4.6", 9)
+	require.NoError(t, err)
+	require.Equal(t, 25000, result.Usage.InputTokens)
+
+	finalUsage := lastStreamUsage(t, out.String())
+	require.Equal(t, int64(25000), finalUsage.Get("input_tokens").Int())
 }
 
 func TestStreamEventStreamAsAnthropicSkipsTrailingWhitespaceOnlyChunk(t *testing.T) {
@@ -1270,4 +1356,22 @@ func buildEventStreamFrame(t *testing.T, eventType string, payload any) []byte {
 	_, _ = frame.Write(payloadBytes)
 	require.NoError(t, binary.Write(frame, binary.BigEndian, uint32(0)))
 	return frame.Bytes()
+}
+
+func lastStreamUsage(t *testing.T, output string) gjson.Result {
+	t.Helper()
+	var usage gjson.Result
+	for _, frame := range strings.Split(output, "\n\n") {
+		if !strings.Contains(frame, "event: message_delta") {
+			continue
+		}
+		for _, line := range strings.Split(frame, "\n") {
+			if !strings.HasPrefix(line, "data: ") {
+				continue
+			}
+			usage = gjson.Get(strings.TrimPrefix(line, "data: "), "usage")
+		}
+	}
+	require.True(t, usage.Exists(), "message_delta usage not found in stream: %s", output)
+	return usage
 }

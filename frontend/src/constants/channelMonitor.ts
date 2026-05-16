@@ -12,11 +12,13 @@ import type { Provider, MonitorStatus } from '@/api/admin/channelMonitor'
 export const PROVIDER_OPENAI: Provider = 'openai'
 export const PROVIDER_ANTHROPIC: Provider = 'anthropic'
 export const PROVIDER_GEMINI: Provider = 'gemini'
+export const PROVIDER_KIRO: Provider = 'kiro'
 
 export const PROVIDERS: readonly Provider[] = [
   PROVIDER_OPENAI,
   PROVIDER_ANTHROPIC,
   PROVIDER_GEMINI,
+  PROVIDER_KIRO,
 ]
 
 export const STATUS_OPERATIONAL: MonitorStatus = 'operational'

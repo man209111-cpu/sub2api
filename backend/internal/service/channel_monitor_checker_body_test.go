@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -36,6 +38,11 @@ func (h *captureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&parsed)
 	h.lastBody = parsed
 
+	respondText := h.respondText
+	if respondText == autoChallengeResponse {
+		respondText = solveMonitorChallengeFromBody(parsed)
+	}
+
 	if h.status == 0 {
 		h.status = 200
 	}
@@ -44,9 +51,33 @@ func (h *captureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 构造 Anthropic 格式的响应：content[0].text = h.respondText
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"content": []map[string]any{
-			{"type": "text", "text": h.respondText},
+			{"type": "text", "text": respondText},
 		},
 	})
+}
+
+const autoChallengeResponse = "__auto_challenge__"
+
+var testChallengeLineRegex = regexp.MustCompile(`Q:\s*(\d+)\s*([+-])\s*(\d+)\s*=\s*\?`)
+
+func solveMonitorChallengeFromBody(body map[string]any) string {
+	msgs, _ := body["messages"].([]any)
+	if len(msgs) == 0 {
+		return ""
+	}
+	first, _ := msgs[0].(map[string]any)
+	prompt, _ := first["content"].(string)
+	matches := testChallengeLineRegex.FindAllStringSubmatch(prompt, -1)
+	if len(matches) == 0 {
+		return ""
+	}
+	last := matches[len(matches)-1]
+	a, _ := strconv.Atoi(last[1])
+	b, _ := strconv.Atoi(last[3])
+	if last[2] == "-" {
+		return strconv.Itoa(a - b)
+	}
+	return strconv.Itoa(a + b)
 }
 
 func setupFakeAnthropic(t *testing.T, handler *captureHandler) string {
@@ -58,7 +89,7 @@ func setupFakeAnthropic(t *testing.T, handler *captureHandler) string {
 }
 
 func TestRunCheckForModel_OffMode_PreservesDefaultBody(t *testing.T) {
-	h := &captureHandler{respondText: "the answer is 42"}
+	h := &captureHandler{respondText: autoChallengeResponse}
 	endpoint := setupFakeAnthropic(t, h)
 
 	// 跑一次 off 模式（opts=nil），确认默认 body 行为未变
@@ -72,6 +103,29 @@ func TestRunCheckForModel_OffMode_PreservesDefaultBody(t *testing.T) {
 	}
 	if h.lastHeaders.Get("x-api-key") != "sk-fake" {
 		t.Errorf("expected adapter's x-api-key header, got %q", h.lastHeaders.Get("x-api-key"))
+	}
+}
+
+func TestRunCheckForModel_KiroUsesAnthropicCompatibleMessages(t *testing.T) {
+	h := &captureHandler{respondText: autoChallengeResponse}
+	endpoint := setupFakeAnthropic(t, h)
+
+	res := runCheckForModel(context.Background(), MonitorProviderKiro, endpoint, "sk-kiro", "kiro-model", nil)
+
+	if res.Status != MonitorStatusOperational {
+		t.Fatalf("expected operational, got status=%s message=%q", res.Status, res.Message)
+	}
+	if h.lastBody["model"] != "kiro-model" {
+		t.Errorf("kiro body should contain model=kiro-model, got %v", h.lastBody["model"])
+	}
+	if _, ok := h.lastBody["messages"]; !ok {
+		t.Error("kiro body should contain Anthropic-compatible messages")
+	}
+	if h.lastHeaders.Get("x-api-key") != "sk-kiro" {
+		t.Errorf("expected x-api-key header, got %q", h.lastHeaders.Get("x-api-key"))
+	}
+	if h.lastHeaders.Get("anthropic-version") != monitorAnthropicAPIVersion {
+		t.Errorf("expected anthropic-version header, got %q", h.lastHeaders.Get("anthropic-version"))
 	}
 }
 

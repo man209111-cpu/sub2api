@@ -196,6 +196,23 @@ var providerAdapters = map[string]providerAdapter{
 		},
 		textPath: "content.0.text",
 	},
+	MonitorProviderKiro: {
+		buildPath: func(string) string { return providerAnthropicPath },
+		buildBody: func(model, prompt string) ([]byte, error) {
+			return json.Marshal(map[string]any{
+				"model":      model,
+				"messages":   []map[string]string{{"role": "user", "content": prompt}},
+				"max_tokens": monitorChallengeMaxTokens,
+			})
+		},
+		buildHeaders: func(apiKey string) map[string]string {
+			return map[string]string{
+				"x-api-key":         apiKey,
+				"anthropic-version": monitorAnthropicAPIVersion,
+			}
+		},
+		textPath: "content.0.text",
+	},
 	MonitorProviderGemini: {
 		// Gemini 把 model 名写在 URL path 上：/v1beta/models/{model}:generateContent
 		buildPath: func(model string) string { return fmt.Sprintf(providerGeminiPathTemplate, model) },
@@ -323,6 +340,7 @@ func buildRequestBody(adapter providerAdapter, provider, model, prompt string, o
 var bodyMergeKeyDenyList = map[string]map[string]bool{
 	MonitorProviderOpenAI:    {"model": true, "messages": true, "stream": true},
 	MonitorProviderAnthropic: {"model": true, "messages": true},
+	MonitorProviderKiro:      {"model": true, "messages": true},
 	MonitorProviderGemini:    {"contents": true},
 }
 
